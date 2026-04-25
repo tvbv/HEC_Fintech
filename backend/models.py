@@ -13,6 +13,8 @@ class IntakeRequest(BaseModel):
     has_income: bool
     income_bracket: Optional[str] = None
     currency: Optional[str] = "EUR"
+    # Multi-select goals: "banking", "admin_setup", "taxes", "perks"
+    goals: Optional[list[str]] = []
 
 
 class IntakeResponse(BaseModel):
