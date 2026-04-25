@@ -1,0 +1,722 @@
+[
+  {
+    "id": "wise",
+    "name": "Wise (ex-TransferWise)",
+    "url": "https://wise.com/fr",
+    "logo_url": "https://wise.com/public-resources/assets/logos/wise/brand_logo.svg",
+    "type": "néobanque",
+    "country_available": ["FR"],
+    "languages_supported": ["fr", "en", "de", "es", "it", "pt", "zh", "ja", "ar"],
+    "opening_requirements": {
+      "requires_french_address": false,
+      "requires_french_phone": false,
+      "requires_proof_of_income": false,
+      "requires_visa": false,
+      "minimum_age": 18,
+      "accepted_id_types": ["passeport", "carte_identite_EU", "titre_sejour"]
+    },
+    "fees": {
+      "monthly_fee_eur": 0,
+      "card_delivery_fee_eur": 9,
+      "atm_withdrawal_free_limit_eur": 200,
+      "atm_withdrawal_fee_above_limit_percent": 1.75,
+      "international_transfer_fee": "0.35% à 2.85% selon devise",
+      "fx_markup_percent": 0
+    },
+    "features": {
+      "iban_type": "BE (Belge) — accepté partout en EU",
+      "multi_currency": true,
+      "supported_currencies": 40,
+      "debit_card": true,
+      "virtual_card": true,
+      "savings": false,
+      "credit": false,
+      "mobile_app": true,
+      "apple_pay": true,
+      "google_pay": true,
+      "international_transfers": true,
+      "direct_debit": true,
+      "cheque": false
+    },
+    "strengths": [
+      "Meilleur taux de change du marché (taux interbancaire)",
+      "Ouverture de compte sans adresse française",
+      "Compte multi-devises (EUR, USD, GBP, JPY, etc.)",
+      "Virements internationaux ultra-rapides et peu coûteux",
+      "Application disponible dans plus de 15 langues"
+    ],
+    "weaknesses": [
+      "IBAN belge (BE) parfois refusé pour domiciliation salaire en France",
+      "Pas de crédit, pas d'épargne",
+      "Pas de conseiller humain"
+    ],
+    "ideal_for": [
+      "primo-arrivant sans adresse fixe",
+      "freelance international",
+      "envoi d'argent régulier vers pays d'origine",
+      "multi-devises",
+      "nomade digital"
+    ],
+    "not_recommended_for": [
+      "banque principale pour domicilier un salaire français",
+      "besoin de crédit immobilier",
+      "personnes peu à l'aise avec le numérique"
+    ],
+    "expat_score": 9,
+    "opening_time": "10 minutes en ligne",
+    "customer_support": "Chat en ligne, email — pas de téléphone"
+  },
+
+  {
+    "id": "n26",
+    "name": "N26",
+    "url": "https://n26.com/fr-fr",
+    "logo_url": "https://n26.com/images/n26-logo.svg",
+    "type": "néobanque",
+    "country_available": ["FR"],
+    "languages_supported": ["fr", "en", "de", "es", "it"],
+    "opening_requirements": {
+      "requires_french_address": false,
+      "requires_french_phone": false,
+      "requires_proof_of_income": false,
+      "requires_visa": false,
+      "minimum_age": 18,
+      "accepted_id_types": ["passeport", "carte_identite_EU", "titre_sejour"]
+    },
+    "fees": {
+      "monthly_fee_eur": 0,
+      "card_delivery_fee_eur": 0,
+      "atm_withdrawal_free_limit_eur": null,
+      "atm_withdrawal_fee_above_limit_percent": null,
+      "atm_withdrawal_note": "3 retraits gratuits/mois en zone euro, 1.7% ensuite",
+      "international_transfer_fee": "via Wise intégré",
+      "fx_markup_percent": 1.7
+    },
+    "features": {
+      "iban_type": "DE (Allemand) — largement accepté en EU",
+      "multi_currency": false,
+      "supported_currencies": 1,
+      "debit_card": true,
+      "virtual_card": true,
+      "savings": true,
+      "credit": false,
+      "mobile_app": true,
+      "apple_pay": true,
+      "google_pay": true,
+      "international_transfers": true,
+      "direct_debit": true,
+      "cheque": false
+    },
+    "strengths": [
+      "Ouverture 100% en ligne sans justificatif de domicile français",
+      "IBAN européen accepté partout",
+      "Interface très intuitive, idéale pour non-francophones",
+      "Notifications instantanées pour chaque transaction",
+      "Sous-comptes Spaces pour organiser son épargne"
+    ],
+    "weaknesses": [
+      "IBAN allemand (DE) — certains employeurs français refusent la domiciliation",
+      "Pas de crédit immobilier",
+      "Support client limité en version gratuite"
+    ],
+    "ideal_for": [
+      "primo-arrivant",
+      "étudiant étranger",
+      "salarié expatrié cherchant une banque simple",
+      "personne arrivant sans justificatif de domicile"
+    ],
+    "not_recommended_for": [
+      "besoin d'IBAN français (FR76)",
+      "besoin de crédit",
+      "virements internationaux fréquents hors EU"
+    ],
+    "expat_score": 8,
+    "opening_time": "8 minutes en ligne",
+    "customer_support": "Chat in-app, email"
+  },
+
+  {
+    "id": "revolut",
+    "name": "Revolut",
+    "url": "https://www.revolut.com/fr-FR",
+    "logo_url": "https://assets.revolut.com/media/logo/Revolut_Black.svg",
+    "type": "néobanque",
+    "country_available": ["FR"],
+    "languages_supported": ["fr", "en", "de", "es", "it", "pt", "pl", "ro", "uk", "ru", "zh", "ja"],
+    "opening_requirements": {
+      "requires_french_address": false,
+      "requires_french_phone": false,
+      "requires_proof_of_income": false,
+      "requires_visa": false,
+      "minimum_age": 18,
+      "accepted_id_types": ["passeport", "carte_identite_EU", "titre_sejour", "permis_conduire_EU"]
+    },
+    "fees": {
+      "monthly_fee_eur": 0,
+      "card_delivery_fee_eur": 5.99,
+      "atm_withdrawal_free_limit_eur": 200,
+      "atm_withdrawal_fee_above_limit_percent": 2,
+      "international_transfer_fee": "Gratuit EU, variable hors EU",
+      "fx_markup_percent": 0,
+      "fx_markup_note": "Taux interbancaire en semaine, +0.5% le week-end"
+    },
+    "features": {
+      "iban_type": "LT (Lituanien) — accepté en EU",
+      "multi_currency": true,
+      "supported_currencies": 30,
+      "debit_card": true,
+      "virtual_card": true,
+      "savings": true,
+      "credit": false,
+      "mobile_app": true,
+      "apple_pay": true,
+      "google_pay": true,
+      "international_transfers": true,
+      "direct_debit": true,
+      "cheque": false,
+      "crypto": true,
+      "stocks": true,
+      "travel_insurance": true
+    },
+    "strengths": [
+      "Application la plus complète : change, crypto, actions, assurance voyage",
+      "Échange de devises au taux interbancaire (sans frais en semaine)",
+      "30+ devises disponibles",
+      "Assurance voyage incluse dès l'offre Standard",
+      "Idéal pour les voyageurs fréquents"
+    ],
+    "weaknesses": [
+      "IBAN lituanien (LT) — non accepté pour certaines domiciliations de salaire",
+      "Frais de change le week-end",
+      "Support client parfois lent",
+      "Compte peut être bloqué sans préavis"
+    ],
+    "ideal_for": [
+      "voyageur fréquent",
+      "expatrié multi-pays",
+      "investisseur (crypto, actions)",
+      "personne gérant plusieurs devises",
+      "digital nomad"
+    ],
+    "not_recommended_for": [
+      "banque principale unique",
+      "besoin de crédit",
+      "personnes voulant un IBAN français"
+    ],
+    "expat_score": 8,
+    "opening_time": "5 minutes en ligne",
+    "customer_support": "Chat in-app 24/7 (bot), humain sur offres payantes"
+  },
+
+  {
+    "id": "hello-bank",
+    "name": "Hello bank! (BNP Paribas)",
+    "url": "https://www.hellobank.fr",
+    "logo_url": "https://www.hellobank.fr/content/dam/hellobank/logo.svg",
+    "type": "banque en ligne",
+    "country_available": ["FR"],
+    "languages_supported": ["fr"],
+    "opening_requirements": {
+      "requires_french_address": true,
+      "requires_french_phone": true,
+      "requires_proof_of_income": true,
+      "requires_visa": false,
+      "requires_tax_residence_france": false,
+      "minimum_age": 18,
+      "accepted_id_types": ["passeport", "carte_identite_EU", "titre_sejour"],
+      "minimum_monthly_income_eur": 1000,
+      "notes": "Accepte les ressortissants étrangers avec titre de séjour valide"
+    },
+    "fees": {
+      "monthly_fee_eur": 0,
+      "card_delivery_fee_eur": 0,
+      "atm_withdrawal_free_limit_eur": null,
+      "atm_withdrawal_note": "Gratuit dans les DAB BNP Paribas et Hello bank!, frais ailleurs",
+      "international_transfer_fee": "Gratuit zone SEPA, variable hors SEPA",
+      "fx_markup_percent": 2.9
+    },
+    "features": {
+      "iban_type": "FR (Français) — IBAN FR76 complet",
+      "multi_currency": false,
+      "supported_currencies": 1,
+      "debit_card": true,
+      "virtual_card": true,
+      "savings": true,
+      "credit": true,
+      "credit_types": ["crédit consommation", "crédit immobilier via BNP"],
+      "mobile_app": true,
+      "apple_pay": true,
+      "google_pay": true,
+      "international_transfers": true,
+      "direct_debit": true,
+      "cheque": true,
+      "livret_A": true,
+      "assurance_vie": true
+    },
+    "strengths": [
+      "IBAN français (FR76) — accepté partout sans exception",
+      "Adossée à BNP Paribas — solidité et réseau agences physiques en backup",
+      "Livret A, assurance vie, crédit immobilier disponibles",
+      "Chéquier disponible",
+      "Zéro frais mensuels avec conditions de revenus"
+    ],
+    "weaknesses": [
+      "Nécessite une adresse française et revenus justifiés",
+      "Interface moins moderne que les néobanques",
+      "Frais de change élevés pour les transactions internationales",
+      "Support uniquement en français"
+    ],
+    "ideal_for": [
+      "expatrié installé en France avec revenus stables",
+      "salarié voulant domicilier son salaire",
+      "personne ayant besoin d'un IBAN FR76",
+      "projet immobilier en France",
+      "besoin d'un chéquier"
+    ],
+    "not_recommended_for": [
+      "primo-arrivant sans adresse ni revenus",
+      "virements internationaux fréquents",
+      "non-francophone"
+    ],
+    "expat_score": 7,
+    "opening_time": "15-30 minutes en ligne, validation sous 24-48h",
+    "customer_support": "Téléphone, chat, email — français uniquement"
+  },
+
+  {
+    "id": "boursorama",
+    "name": "Boursobank (ex-Boursorama)",
+    "url": "https://www.boursobank.com",
+    "logo_url": "https://www.boursobank.com/assets/images/logo.svg",
+    "type": "banque en ligne",
+    "country_available": ["FR"],
+    "languages_supported": ["fr"],
+    "opening_requirements": {
+      "requires_french_address": true,
+      "requires_french_phone": true,
+      "requires_proof_of_income": true,
+      "requires_visa": false,
+      "minimum_age": 18,
+      "accepted_id_types": ["passeport", "carte_identite_EU", "titre_sejour"],
+      "minimum_monthly_income_eur": 1000,
+      "notes": "Accepte les résidents fiscaux en France, y compris étrangers"
+    },
+    "fees": {
+      "monthly_fee_eur": 0,
+      "card_delivery_fee_eur": 0,
+      "atm_withdrawal_free_limit_eur": null,
+      "atm_withdrawal_note": "Gratuit partout en France avec carte Visa Classic",
+      "international_transfer_fee": "Gratuit SEPA, 0.80€ + commission hors SEPA",
+      "fx_markup_percent": 1.69
+    },
+    "features": {
+      "iban_type": "FR (Français) — IBAN FR76 complet",
+      "multi_currency": false,
+      "supported_currencies": 1,
+      "debit_card": true,
+      "virtual_card": true,
+      "savings": true,
+      "credit": true,
+      "credit_types": ["crédit consommation", "crédit immobilier", "rachat de crédit"],
+      "mobile_app": true,
+      "apple_pay": true,
+      "google_pay": true,
+      "international_transfers": true,
+      "direct_debit": true,
+      "cheque": true,
+      "livret_A": true,
+      "PEA": true,
+      "assurance_vie": true,
+      "bourse": true
+    },
+    "strengths": [
+      "Banque la moins chère de France selon les classements annuels",
+      "IBAN français (FR76) — zéro problème de domiciliation",
+      "Offre complète : épargne, bourse, crédit immobilier, assurance",
+      "Application mobile très bien notée",
+      "Prime de bienvenue de 80-150€ selon offre"
+    ],
+    "weaknesses": [
+      "Réservée aux résidents fiscaux français avec revenus justifiés",
+      "Délai d'ouverture plus long (3-7 jours)",
+      "Frais de change supérieurs aux néobanques",
+      "Support uniquement en français"
+    ],
+    "ideal_for": [
+      "expatrié installé avec CDI ou revenus stables",
+      "profil cherchant la banque principale à long terme en France",
+      "investisseur (PEA, assurance-vie, bourse)",
+      "projet immobilier en France",
+      "cherche à minimiser les frais bancaires français"
+    ],
+    "not_recommended_for": [
+      "primo-arrivant sans historique financier français",
+      "virements internationaux fréquents",
+      "non-francophone"
+    ],
+    "expat_score": 7,
+    "opening_time": "30 minutes en ligne, validation sous 3-7 jours",
+    "customer_support": "Téléphone, chat, email — français uniquement"
+  },
+
+  {
+    "id": "bunq",
+    "name": "Bunq",
+    "url": "https://www.bunq.com/fr",
+    "logo_url": "https://www.bunq.com/assets/media/bunq-logo.svg",
+    "type": "néobanque",
+    "country_available": ["FR"],
+    "languages_supported": ["fr", "en", "de", "nl", "es", "it", "pt", "tr"],
+    "opening_requirements": {
+      "requires_french_address": false,
+      "requires_french_phone": false,
+      "requires_proof_of_income": false,
+      "requires_visa": false,
+      "minimum_age": 18,
+      "accepted_id_types": ["passeport", "carte_identite_EU", "titre_sejour"]
+    },
+    "fees": {
+      "monthly_fee_eur": 3.99,
+      "monthly_fee_note": "Offre Easy Money à 3.99€/mois — offre gratuite très limitée",
+      "card_delivery_fee_eur": 0,
+      "atm_withdrawal_free_limit_eur": null,
+      "atm_withdrawal_note": "0.99€ par retrait hors réseau",
+      "international_transfer_fee": "Gratuit SEPA",
+      "fx_markup_percent": 0.5
+    },
+    "features": {
+      "iban_type": "NL (Néerlandais) ou FR selon offre — IBAN FR disponible",
+      "multi_currency": true,
+      "supported_currencies": 16,
+      "debit_card": true,
+      "virtual_card": true,
+      "savings": true,
+      "credit": false,
+      "mobile_app": true,
+      "apple_pay": true,
+      "google_pay": true,
+      "international_transfers": true,
+      "direct_debit": true,
+      "cheque": false,
+      "sub_accounts": true,
+      "joint_accounts": true,
+      "travel_insurance": false
+    },
+    "strengths": [
+      "Peut fournir un IBAN français (FR) selon l'offre choisie",
+      "Ouverture sans adresse française requise",
+      "Multi-devises avec faibles frais de change",
+      "Plusieurs sous-comptes pour organiser son budget",
+      "Très axé vie privée et durabilité"
+    ],
+    "weaknesses": [
+      "Frais mensuels même sur l'offre de base utile",
+      "Moins connu, support parfois lent",
+      "Pas de crédit"
+    ],
+    "ideal_for": [
+      "expatrié souhaitant un IBAN FR sans justificatifs",
+      "personne qui gère plusieurs projets financiers",
+      "profil éco-responsable",
+      "indépendant / freelance en France"
+    ],
+    "not_recommended_for": [
+      "besoin de crédit",
+      "personne souhaitant éviter les frais mensuels"
+    ],
+    "expat_score": 7,
+    "opening_time": "10 minutes en ligne",
+    "customer_support": "Chat in-app, email — multilingue"
+  },
+
+  {
+    "id": "societe-generale-expat",
+    "name": "Société Générale — offre étudiant/expat",
+    "url": "https://particuliers.societegenerale.fr/nos-offres/comptes-courants/compte-courrant-international",
+    "logo_url": "https://www.societegenerale.com/sites/default/files/sg-logo.svg",
+    "type": "banque traditionnelle",
+    "country_available": ["FR"],
+    "languages_supported": ["fr", "en"],
+    "opening_requirements": {
+      "requires_french_address": true,
+      "requires_french_phone": false,
+      "requires_proof_of_income": false,
+      "requires_visa": false,
+      "minimum_age": 18,
+      "accepted_id_types": ["passeport", "carte_identite_EU", "titre_sejour"],
+      "notes": "Offre dédiée aux étudiants étrangers et nouveaux arrivants — conditions assouplies"
+    },
+    "fees": {
+      "monthly_fee_eur": 7.5,
+      "monthly_fee_note": "Forfait Sobrio — gratuit pour étudiants sous conditions",
+      "card_delivery_fee_eur": 0,
+      "atm_withdrawal_free_limit_eur": null,
+      "atm_withdrawal_note": "Gratuit réseau SG, 1€ hors réseau",
+      "international_transfer_fee": "Gratuit SEPA, variable hors SEPA",
+      "fx_markup_percent": 2.5
+    },
+    "features": {
+      "iban_type": "FR (Français) — IBAN FR76 complet",
+      "multi_currency": false,
+      "supported_currencies": 1,
+      "debit_card": true,
+      "virtual_card": false,
+      "savings": true,
+      "credit": true,
+      "credit_types": ["découvert autorisé", "crédit consommation", "crédit immobilier"],
+      "mobile_app": true,
+      "apple_pay": true,
+      "google_pay": true,
+      "international_transfers": true,
+      "direct_debit": true,
+      "cheque": true,
+      "livret_A": true,
+      "agences_physiques": true,
+      "conseiller_dedie": true
+    },
+    "strengths": [
+      "Offre spéciale primo-arrivants et étudiants étrangers — conditions assouplies",
+      "IBAN français (FR76) dès l'ouverture",
+      "Réseau d'agences physiques partout en France",
+      "Conseiller dédié pour accompagner l'installation",
+      "Découvert autorisé rapidement",
+      "Possibilité de crédit immobilier après ancienneté"
+    ],
+    "weaknesses": [
+      "Frais mensuels sur l'offre standard",
+      "Interface digitale moins moderne que les néobanques",
+      "Frais de change élevés pour les transactions internationales",
+      "Support principalement en français"
+    ],
+    "ideal_for": [
+      "étudiant étranger arrivant en France",
+      "cadre expatrié voulant une banque avec interlocuteur humain",
+      "personne voulant un IBAN FR dès l'arrivée",
+      "famille expatriée avec besoin d'accompagnement"
+    ],
+    "not_recommended_for": [
+      "virements internationaux fréquents et peu coûteux",
+      "profil cherchant zéro frais"
+    ],
+    "expat_score": 7,
+    "opening_time": "Sur rendez-vous en agence ou en ligne sous 48h",
+    "customer_support": "Agences, téléphone, chat — principalement français"
+  },
+
+  {
+    "id": "hsbc-expat",
+    "name": "HSBC France — compte international",
+    "url": "https://www.hsbc.fr/1/2/hsbc-france/particuliers/international",
+    "logo_url": "https://www.hsbc.fr/content/dam/hsbc/fr/images/logos/hsbc-logo.svg",
+    "type": "banque traditionnelle premium",
+    "country_available": ["FR"],
+    "languages_supported": ["fr", "en", "zh", "ar"],
+    "opening_requirements": {
+      "requires_french_address": true,
+      "requires_french_phone": false,
+      "requires_proof_of_income": true,
+      "requires_visa": false,
+      "minimum_age": 18,
+      "accepted_id_types": ["passeport", "carte_identite_EU", "titre_sejour"],
+      "minimum_monthly_income_eur": 5000,
+      "notes": "Offre premium — revenus élevés requis ou patrimoine significatif"
+    },
+    "fees": {
+      "monthly_fee_eur": 25,
+      "monthly_fee_note": "Offre Premier — gratuite si revenus > 5000€/mois ou patrimoine > 75k€",
+      "card_delivery_fee_eur": 0,
+      "atm_withdrawal_free_limit_eur": null,
+      "atm_withdrawal_note": "Gratuit dans tout le réseau HSBC mondial",
+      "international_transfer_fee": "Gratuit vers comptes HSBC mondiaux",
+      "fx_markup_percent": 1.5
+    },
+    "features": {
+      "iban_type": "FR (Français) — IBAN FR76 complet",
+      "multi_currency": true,
+      "supported_currencies": 20,
+      "debit_card": true,
+      "virtual_card": false,
+      "savings": true,
+      "credit": true,
+      "credit_types": ["crédit immobilier international", "crédit consommation", "gestion de patrimoine"],
+      "mobile_app": true,
+      "apple_pay": true,
+      "google_pay": true,
+      "international_transfers": true,
+      "direct_debit": true,
+      "cheque": true,
+      "livret_A": true,
+      "assurance_vie": true,
+      "wealth_management": true,
+      "agences_physiques": true,
+      "conseiller_dedie": true,
+      "reseau_mondial": true
+    },
+    "strengths": [
+      "Réseau HSBC mondial — idéal pour mobilité internationale",
+      "Retraits gratuits dans tous les DAB HSBC du monde",
+      "Virements internationaux gratuits entre comptes HSBC",
+      "Gestion de patrimoine et conseil en investissement",
+      "Accompagnement dédié pour les expatriés haute gamme",
+      "Compte multi-devises avec IBAN FR"
+    ],
+    "weaknesses": [
+      "Revenus ou patrimoine élevés requis",
+      "Frais mensuels si conditions non remplies",
+      "Pas adapté aux profils modestes ou étudiants"
+    ],
+    "ideal_for": [
+      "cadre dirigeant expatrié",
+      "haut revenu (> 5000€/mois)",
+      "mobilité internationale fréquente",
+      "gestion de patrimoine transfrontalier",
+      "famille avec enfants à l'étranger"
+    ],
+    "not_recommended_for": [
+      "revenus modestes ou étudiants",
+      "profil cherchant une banque low-cost"
+    ],
+    "expat_score": 8,
+    "opening_time": "Sur rendez-vous, validation sous 3-5 jours",
+    "customer_support": "Conseiller dédié, téléphone, agences — multilingue"
+  },
+
+  {
+    "id": "orange-bank",
+    "name": "Orange Bank",
+    "url": "https://www.orangebank.fr",
+    "logo_url": "https://www.orangebank.fr/wp-content/uploads/orange-bank-logo.svg",
+    "type": "banque en ligne",
+    "country_available": ["FR"],
+    "languages_supported": ["fr"],
+    "opening_requirements": {
+      "requires_french_address": true,
+      "requires_french_phone": true,
+      "requires_proof_of_income": false,
+      "requires_visa": false,
+      "minimum_age": 18,
+      "accepted_id_types": ["passeport", "carte_identite_EU", "titre_sejour"],
+      "notes": "Numéro de téléphone Orange non obligatoire malgré le nom"
+    },
+    "fees": {
+      "monthly_fee_eur": 0,
+      "card_delivery_fee_eur": 0,
+      "atm_withdrawal_free_limit_eur": null,
+      "atm_withdrawal_note": "Gratuit dans réseau Orange Bank et Société Générale",
+      "international_transfer_fee": "Gratuit SEPA",
+      "fx_markup_percent": 2.99
+    },
+    "features": {
+      "iban_type": "FR (Français) — IBAN FR76 complet",
+      "multi_currency": false,
+      "supported_currencies": 1,
+      "debit_card": true,
+      "virtual_card": false,
+      "savings": true,
+      "credit": true,
+      "credit_types": ["crédit consommation"],
+      "mobile_app": true,
+      "apple_pay": true,
+      "google_pay": true,
+      "international_transfers": true,
+      "direct_debit": true,
+      "cheque": false,
+      "livret_A": true
+    },
+    "strengths": [
+      "IBAN français (FR76) sans frais mensuels",
+      "Ouverture simple avec adresse française",
+      "Chatbot IA disponible 24/7 pour les questions courantes",
+      "Adossée à Société Générale — solidité garantie"
+    ],
+    "weaknesses": [
+      "Nécessite une adresse française",
+      "Support uniquement en français",
+      "Pas de multi-devises",
+      "Frais de change importants"
+    ],
+    "ideal_for": [
+      "expatrié installé cherchant IBAN FR sans frais",
+      "profil simple sans besoins internationaux complexes"
+    ],
+    "not_recommended_for": [
+      "primo-arrivant sans adresse",
+      "virements internationaux",
+      "non-francophone"
+    ],
+    "expat_score": 5,
+    "opening_time": "15 minutes en ligne",
+    "customer_support": "Chatbot, téléphone — français uniquement"
+  },
+
+  {
+    "id": "cic-expat",
+    "name": "CIC — compte non-résident / nouveau arrivant",
+    "url": "https://www.cic.fr/particuliers/international/expatries.html",
+    "logo_url": "https://www.cic.fr/fr/commun/images/logo-cic.svg",
+    "type": "banque traditionnelle",
+    "country_available": ["FR"],
+    "languages_supported": ["fr", "en"],
+    "opening_requirements": {
+      "requires_french_address": false,
+      "requires_french_phone": false,
+      "requires_proof_of_income": false,
+      "requires_visa": false,
+      "minimum_age": 18,
+      "accepted_id_types": ["passeport", "carte_identite_EU", "titre_sejour"],
+      "notes": "Possibilité d'ouvrir avant l'arrivée en France depuis l'étranger"
+    },
+    "fees": {
+      "monthly_fee_eur": 6,
+      "card_delivery_fee_eur": 0,
+      "atm_withdrawal_free_limit_eur": null,
+      "atm_withdrawal_note": "Gratuit réseau CIC/Crédit Mutuel",
+      "international_transfer_fee": "Gratuit SEPA, variable hors SEPA",
+      "fx_markup_percent": 2.0
+    },
+    "features": {
+      "iban_type": "FR (Français) — IBAN FR76 complet",
+      "multi_currency": false,
+      "supported_currencies": 1,
+      "debit_card": true,
+      "virtual_card": false,
+      "savings": true,
+      "credit": true,
+      "credit_types": ["crédit consommation", "crédit immobilier"],
+      "mobile_app": true,
+      "apple_pay": true,
+      "google_pay": true,
+      "international_transfers": true,
+      "direct_debit": true,
+      "cheque": true,
+      "livret_A": true,
+      "agences_physiques": true,
+      "ouverture_avant_arrivee": true
+    },
+    "strengths": [
+      "Ouverture possible AVANT l'arrivée en France depuis l'étranger",
+      "IBAN français (FR76) immédiatement utilisable",
+      "Réseau d'agences dense — présence physique partout en France",
+      "Conseiller dédié pour les nouveaux arrivants",
+      "Accepte les non-résidents"
+    ],
+    "weaknesses": [
+      "Frais mensuels",
+      "Interface moins moderne que les néobanques",
+      "Support principalement en français"
+    ],
+    "ideal_for": [
+      "expatrié souhaitant ouvrir un compte AVANT d'arriver en France",
+      "famille expatriée cherchant une banque de proximité",
+      "personne voulant un IBAN FR dès le premier jour",
+      "profil cherchant un conseiller humain"
+    ],
+    "not_recommended_for": [
+      "profil cherchant zéro frais",
+      "virements internationaux fréquents et peu coûteux"
+    ],
+    "expat_score": 8,
+    "opening_time": "Depuis l'étranger : 1-2 semaines par courrier/en ligne",
+    "customer_support": "Agences, téléphone, email — principalement français, anglais disponible"
+  }
+]
