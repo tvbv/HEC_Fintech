@@ -5,7 +5,7 @@ load_dotenv()
 from database import init_db
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routes import banks, health, intake
+from routes import banks, health, intake, document_upload
 
 # ─────────────────────────────────────────────
 # INITIALIZE DATABASE
@@ -37,3 +37,4 @@ app.add_middleware(
 app.include_router(health.router, tags=["health"])
 app.include_router(intake.router, prefix="/intake", tags=["profile"])
 app.include_router(banks.router, prefix="/banks", tags=["banking"])
+app.include_router(document_upload.router, prefix="/documents", tags=["documents"])
