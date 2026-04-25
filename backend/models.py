@@ -19,3 +19,16 @@ class IntakeRequest(BaseModel):
 
 class IntakeResponse(BaseModel):
     profile_id: int
+
+
+class ExtractedDocument(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    date_of_birth: Optional[str] = None
+    nationality: Optional[str] = None
+    document_type: Optional[str] = None
+
+
+class DocumentUploadResponse(BaseModel):
+    document_id: int
+    extracted: ExtractedDocument

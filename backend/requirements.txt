@@ -4,3 +4,7 @@ sqlalchemy==2.0.35
 pydantic==2.9.2
 cerebras-cloud-sdk
 python-dotenv==1.0.1
+google-genai
+python-multipart
+Pillow
+pdf2image

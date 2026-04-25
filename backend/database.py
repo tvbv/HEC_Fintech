@@ -28,8 +28,29 @@ class Profile(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
+class Document(Base):
+    __tablename__ = "documents"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    first_name = Column(String, nullable=True)
+    last_name = Column(String, nullable=True)
+    date_of_birth = Column(String, nullable=True)
+    nationality = Column(String(2), nullable=True)
+    document_type = Column(String, nullable=True)
+    file_name = Column(String, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
 def init_db():
     Base.metadata.create_all(bind=engine)
+
+
+def save_document(db: Session, data: dict) -> int:
+    doc = Document(**data)
+    db.add(doc)
+    db.commit()
+    db.refresh(doc)
+    return doc.id
 
 
 def save_profile(db: Session, data: dict) -> int:
