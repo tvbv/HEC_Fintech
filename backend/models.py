@@ -25,6 +25,25 @@ class IntakeResponse(BaseModel):
     profile_id: int
 
 
+class GetProfileResponse(BaseModel):
+    profile_id: int
+    first_name: str
+    last_name: str
+    date_of_birth: str
+    nationality: str
+    country_of_residence: str
+    country_moving_to: str
+    employment_status: str
+    has_income: bool
+    income_bracket: Optional[str] = None
+    currency: Optional[str] = None
+    goals: Optional[list[str]] = None
+    created_at: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
 # ─────────────────────────────────────────────
 # BANKING / RECOMMENDATION MODELS
 # ─────────────────────────────────────────────

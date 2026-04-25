@@ -1,7 +1,8 @@
 import json
-from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime
-from sqlalchemy.orm import DeclarativeBase, Session
 from datetime import datetime, timezone
+
+from sqlalchemy import Boolean, Column, DateTime, Integer, String, create_engine
+from sqlalchemy.orm import DeclarativeBase, Session
 
 engine = create_engine("sqlite:///./data.db", connect_args={"check_same_thread": False})
 
@@ -40,3 +41,9 @@ def save_profile(db: Session, data: dict) -> int:
     db.commit()
     db.refresh(profile)
     return profile.id
+
+
+def get_profile(db: Session, profile_id: int) -> Profile | None:
+    """Retrieve a user profile by ID."""
+    return db.query(Profile).filter(Profile.id == profile_id).first()
+    return db.query(Profile).filter(Profile.id == profile_id).first()
