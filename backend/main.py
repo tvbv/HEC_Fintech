@@ -24,7 +24,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from database import engine, init_db, save_document, save_profile
-from document import extract_from_pdf, extract_from_text
+from document import extract_from_pdf, extract_from_text, extract_from_image
 from models import (
     DocumentUploadResponse,
     ExtractedDocument,
@@ -39,7 +39,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 MAX_FILE_SIZE_MB = 10
-ALLOWED_EXTENSIONS = {".pdf", ".txt"}
+ALLOWED_EXTENSIONS = {".pdf", ".txt", ".jpg", ".jpeg", ".png", ".webp"}
+IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 
 
 @asynccontextmanager
@@ -150,6 +151,9 @@ async def upload_document(file: UploadFile = File(...)):
     try:
         if ext == ".pdf":
             extracted = extract_from_pdf(file_bytes)
+        elif ext in IMAGE_EXTENSIONS:
+            mime_type = file.content_type or "image/jpeg"
+            extracted = extract_from_image(file_bytes, mime_type=mime_type)
         else:
             extracted = extract_from_text(file_bytes.decode("utf-8", errors="ignore"))
 

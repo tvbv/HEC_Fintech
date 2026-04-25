@@ -1,126 +1,77 @@
-"""
-Pydantic schemas for request / response validation.
+from pydantic import BaseModel, field_validator
+from typing import Optional
 
-- IntakeRequest   : user profile submitted via the onboarding form
-- IntakeResponse  : profile ID returned after saving
-- ExtractedDocument     : fields extracted from an uploaded document
-- DocumentUploadResponse: wrapper returned by /upload-document
-"""
+VALID_EMPLOYMENT_STATUSES = {
+    "employed_fulltime", "employed_parttime", "freelance",
+    "student", "between_jobs", "retired"
+}
 
-from __future__ import annotations
+VALID_INCOME_BRACKETS = {
+    "under_10k", "10k_to_30k", "30k_to_60k", "60k_to_100k", "over_100k"
+}
 
-import re
-from typing import Literal, Optional
+VALID_GOALS = {"banking", "admin_setup", "taxes", "perks"}
 
-from pydantic import BaseModel, field_validator, model_validator
-
-# ---------------------------------------------------------------------------
-# Allowed values (kept here so the frontend can reference this file as a spec)
-# ---------------------------------------------------------------------------
-
-EMPLOYMENT_STATUS_VALUES = Literal[
-    "employed_fulltime",
-    "employed_parttime",
-    "freelance",
-    "student",
-    "between_jobs",
-    "retired",
-]
-
-INCOME_BRACKET_VALUES = Literal[
-    "under_10k",
-    "10k_to_30k",
-    "30k_to_60k",
-    "60k_to_100k",
-    "over_100k",
-]
-
-GOAL_VALUES = Literal["banking", "admin_setup", "taxes", "perks"]
-
-
-# ---------------------------------------------------------------------------
-# /intake
-# ---------------------------------------------------------------------------
 
 class IntakeRequest(BaseModel):
     country_of_residence: str
     country_moving_to: str
     first_name: str
     last_name: str
-    date_of_birth: str          # expected: "YYYY-MM-DD"
-    nationality: str            # ISO 3166-1 alpha-2, e.g. "FR"
-    employment_status: EMPLOYMENT_STATUS_VALUES
+    date_of_birth: str        # "YYYY-MM-DD"
+    nationality: str
+    employment_status: str
     has_income: bool
-    income_bracket: Optional[INCOME_BRACKET_VALUES] = None
+    income_bracket: Optional[str] = None
     currency: Optional[str] = "EUR"
-    goals: Optional[list[GOAL_VALUES]] = []
+    goals: Optional[list[str]] = []
 
     @field_validator("country_of_residence", "country_moving_to", "nationality")
     @classmethod
-    def validate_country_code(cls, v: str) -> str:
-        v = v.strip().upper()
-        if not re.fullmatch(r"[A-Z]{2}", v):
-            raise ValueError(
-                f"'{v}' is not a valid ISO 3166-1 alpha-2 country code (e.g. 'FR', 'DE')."
-            )
-        return v
+    def must_be_iso_alpha2(cls, v: str) -> str:
+        if len(v) != 2 or not v.isalpha():
+            raise ValueError(f"'{v}' is not a valid ISO 3166-1 alpha-2 country code (e.g. 'FR', 'DE')")
+        return v.upper()
 
-    @field_validator("date_of_birth")
+    @field_validator("employment_status")
     @classmethod
-    def validate_date(cls, v: str) -> str:
-        v = v.strip()
-        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", v):
+    def must_be_valid_employment(cls, v: str) -> str:
+        if v not in VALID_EMPLOYMENT_STATUSES:
             raise ValueError(
-                f"'{v}' is not a valid date. Expected format: YYYY-MM-DD."
+                f"'{v}' is not valid. Must be one of: {', '.join(sorted(VALID_EMPLOYMENT_STATUSES))}"
             )
         return v
 
-    @field_validator("currency")
+    @field_validator("income_bracket")
     @classmethod
-    def validate_currency(cls, v: Optional[str]) -> Optional[str]:
-        if v is None:
-            return v
-        v = v.strip().upper()
-        if not re.fullmatch(r"[A-Z]{3}", v):
+    def must_be_valid_bracket(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and v not in VALID_INCOME_BRACKETS:
             raise ValueError(
-                f"'{v}' is not a valid ISO 4217 currency code (e.g. 'EUR', 'USD')."
+                f"'{v}' is not valid. Must be one of: {', '.join(sorted(VALID_INCOME_BRACKETS))}"
             )
         return v
 
-    @field_validator("first_name", "last_name")
+    @field_validator("goals")
     @classmethod
-    def validate_name(cls, v: str) -> str:
-        v = v.strip()
-        if not v:
-            raise ValueError("Name fields cannot be empty.")
-        return v
-
-    @model_validator(mode="after")
-    def income_bracket_required_when_has_income(self) -> "IntakeRequest":
-        if self.has_income and not self.income_bracket:
+    def must_be_valid_goals(cls, v: list[str]) -> list[str]:
+        invalid = [g for g in v if g not in VALID_GOALS]
+        if invalid:
             raise ValueError(
-                "'income_bracket' is required when 'has_income' is true."
+                f"{invalid} are not valid goals. Must be from: {', '.join(sorted(VALID_GOALS))}"
             )
-        return self
+        return v
 
 
 class IntakeResponse(BaseModel):
     profile_id: int
 
 
-# ---------------------------------------------------------------------------
-# /upload-document
-# ---------------------------------------------------------------------------
-
 class ExtractedDocument(BaseModel):
-    """Fields extracted from an uploaded document by Cerebras.
-    All fields are optional — the model sets null when it cannot confidently read a value."""
-
     first_name: Optional[str] = None
     last_name: Optional[str] = None
-    date_of_birth: Optional[str] = None    # YYYY-MM-DD or null
-    nationality: Optional[str] = None      # ISO 3166-1 alpha-2 or null
-    document_type: Optional[str] = None    # "passport" | "id_card" | "lease" | etc.
+    date_of_birth: Optional[str] = None
+    nationality: Optional[str] = None
+    document_type: Optional[str] = None
 
 
 class DocumentUploadResponse(BaseModel):

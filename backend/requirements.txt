@@ -6,3 +6,4 @@ cerebras-cloud-sdk==1.67.0
 python-dotenv==1.0.1
 python-multipart==0.0.12
 pdfplumber==0.11.4
+mistralai
