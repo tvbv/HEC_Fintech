@@ -1,3 +1,4 @@
+import json
 from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime
 from sqlalchemy.orm import DeclarativeBase, Session
 from datetime import datetime, timezone
@@ -23,6 +24,7 @@ class Profile(Base):
     has_income = Column(Boolean, nullable=False)
     income_bracket = Column(String, nullable=True)
     currency = Column(String(3), nullable=True)
+    goals = Column(String, nullable=True)  # stored as JSON array string
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
@@ -31,6 +33,8 @@ def init_db():
 
 
 def save_profile(db: Session, data: dict) -> int:
+    if "goals" in data and isinstance(data["goals"], list):
+        data["goals"] = json.dumps(data["goals"])
     profile = Profile(**data)
     db.add(profile)
     db.commit()
