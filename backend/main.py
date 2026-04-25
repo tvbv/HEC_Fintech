@@ -42,8 +42,9 @@ async def upload_document(file: UploadFile = File(...)):
         except Exception as e:
             raise HTTPException(status_code=400, detail=f"PDF conversion failed: {str(e)}")
 
+    mime_type = file.content_type or "image/jpeg"
     try:
-        extracted = extract_from_image(file_bytes)
+        extracted = extract_from_image(file_bytes, mime_type=mime_type)
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Extraction failed: {str(e)}")
 
