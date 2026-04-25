@@ -1,15 +1,29 @@
 from dotenv import load_dotenv
+
 load_dotenv()
 
+from database import init_db
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.orm import Session
+from routes import banks, health, intake
 
-from database import engine, init_db, save_profile
-from models import IntakeRequest, IntakeResponse
+# ─────────────────────────────────────────────
+# INITIALIZE DATABASE
+# ─────────────────────────────────────────────
+init_db()
 
-app = FastAPI(title="Expat Onboarding API")
+# ─────────────────────────────────────────────
+# CREATE FASTAPI APP
+# ─────────────────────────────────────────────
+app = FastAPI(
+    title="Expat Onboarding & Banking API",
+    description="Complete API for expatriate onboarding and bank recommendations",
+    version="1.0.0",
+)
 
+# ─────────────────────────────────────────────
+# CORS MIDDLEWARE
+# ─────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -17,19 +31,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-init_db()
-
-
-@app.post("/intake", response_model=IntakeResponse)
-def intake(request: IntakeRequest):
-    profile = request.model_dump()
-
-    with Session(engine) as db:
-        profile_id = save_profile(db, profile)
-
-    return IntakeResponse(profile_id=profile_id)
-
-
-@app.get("/health")
-def health():
-    return {"status": "ok"}
+# ─────────────────────────────────────────────
+# REGISTER ROUTERS
+# ─────────────────────────────────────────────
+app.include_router(health.router, tags=["health"])
+app.include_router(intake.router, prefix="/intake", tags=["profile"])
+app.include_router(banks.router, prefix="/banks", tags=["banking"])
