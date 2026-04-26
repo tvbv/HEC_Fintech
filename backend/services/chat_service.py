@@ -96,23 +96,21 @@ Tailor every response to this person's specific origin–destination situation (
     if web_context:
         sections.append(
             f"""
-=== WEB SEARCH RESULTS — read these BEFORE answering ===
+=== WEB SEARCH RESULTS ===
 {web_context}
-=========================================================
+==========================
 
-MANDATORY: Use these results as your primary source.
-Pull out the most useful concrete fact or step and lead with it.
-Cite the URL inline (just the domain is fine). 
-If the results don't answer the question, say "I couldn't find a clear answer online" — \
-don't fill in from memory.\
+Instructions for using these results:
+- Synthesise, never copy-paste. Extract the one or two most useful facts and restate them in your own words.
+- Cite only the domain (e.g. "saudihelplinegroup.com"), not the full URL unless asked.
+- If the results don't answer the question, say so in one sentence — don't fill in from memory.\
 """
         )
     else:
         sections.append(
             """
-No live web results available for this query.
-Answer from general knowledge but flag anything time-sensitive with \
-"double-check this as rules change".\
+No live web results available.
+Answer from general knowledge but add "double-check this as rules change" for anything procedural.\
 """
         )
 
@@ -155,9 +153,39 @@ def _build_tavily_query(message: str, profile: dict | None) -> str:
     return " ".join(parts)
 
 
+def _clean_snippet(text: str, max_chars: int = 220) -> str:
+    """
+    Strip web-scraping noise from a Tavily snippet before feeding it to the LLM.
+
+    Removes lines that look like navigation menus, CTAs, phone numbers, or
+    opening-hours text — the kind of content that gets copy-pasted verbatim
+    into the model's response when left unfiltered.
+    """
+    import re
+
+    # Split into sentences / lines and drop junk ones
+    _JUNK = re.compile(
+        r"""(
+            \d{3,}[-.\s]\d{3,}   # phone-number-like patterns
+            | request\s+call\s+back
+            | [0-9]+am\s+to\s+[0-9]+ # opening hours
+            | sunday|monday|tuesday|wednesday|thursday|friday|saturday
+            | click\s+here | read\s+more | learn\s+more | subscribe
+            | copyright | all\s+rights\s+reserved
+            | #+\s+\w+            # markdown h2/h3 headers from scraped pages
+        )""",
+        re.IGNORECASE | re.VERBOSE,
+    )
+
+    sentences = re.split(r"(?<=[.!?])\s+|\n+", text)
+    clean = [s.strip() for s in sentences if s.strip() and not _JUNK.search(s)]
+    result = " ".join(clean)
+    return result[:max_chars].rsplit(" ", 1)[0]  # cut at word boundary
+
+
 def _tavily_search(query: str, profile: dict | None) -> str:
     """
-    Search the web via Tavily and return a compact text summary.
+    Search the web via Tavily and return a clean, LLM-ready summary.
 
     Returns an empty string if TAVILY_API_KEY is not set or the search fails.
     """
@@ -176,20 +204,21 @@ def _tavily_search(query: str, profile: dict | None) -> str:
         results = client.search(
             query=enriched_query,
             search_depth="advanced",
-            max_results=4,
+            max_results=3,       # 3 is enough — fewer = less noise
             include_answer=True,
         )
 
         lines: list[str] = []
 
+        # Tavily's own AI-generated answer is usually the cleanest signal
         if results.get("answer"):
-            lines.append(f"Summary: {results['answer']}")
+            lines.append(f"Key fact: {results['answer']}")
 
         for r in results.get("results", []):
-            title = r.get("title", "")
-            snippet = r.get("content", "")[:400]
+            snippet = _clean_snippet(r.get("content", ""))
             url = r.get("url", "")
-            lines.append(f"• {title}: {snippet} ({url})")
+            if snippet:
+                lines.append(f"- {snippet} (source: {url})")
 
         return "\n".join(lines)
 
