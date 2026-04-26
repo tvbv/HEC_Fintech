@@ -63,8 +63,8 @@ class ProfileService:
                 "has_income": profile.has_income,
                 "income_bracket": profile.income_bracket,
                 "currency": profile.currency,
-                # France-specific context
-                "time_in_france": profile.time_in_france,
+                # Destination context
+                "time_at_destination": profile.time_at_destination,
                 "has_financial_ties_abroad": profile.has_financial_ties_abroad,
                 "already_has": (
                     json.loads(profile.already_has) if profile.already_has else None

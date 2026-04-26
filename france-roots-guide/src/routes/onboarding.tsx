@@ -6,7 +6,7 @@ import { Cleo, CleoBubble } from "@/components/concierge/Cleo";
 import { Flag, type CountryCode } from "@/components/concierge/Flags";
 import { submitIntake, type IntakeRequest } from "@/lib/api";
 import {
-  IconArrowLeft, IconArrowRight, IconCheck, IconLock, IconSearch,
+  IconArrowLeft, IconArrowRight, IconCheck, IconSearch,
   IconBank, IconDocumentCheck, IconCalculator, IconGift,
   IconGraduationCap, IconBriefcase, IconLightning, IconSearch as IconSearch2,
   IconCircles, IconMapPin, IconCard, IconPhone, IconHome, IconShield,
@@ -28,23 +28,62 @@ function Onboarding() {
   const navigate = useNavigate();
   const { onboarding, setOnboarding, toggleDocument, completeOnboarding, setProfileId } = useApp();
 
+  // Mapping tables — frontend keys → backend literals
+  const STATUS_MAP: Record<string, string> = {
+    student: 'student',
+    salaried: 'employed_fulltime',
+    freelance: 'freelance',
+    jobseeker: 'between_jobs',
+  };
+
+  const TIME_MAP: Record<string, string> = {
+    '0-3': 'just_arrived',
+    '3-12': 'settling_in',
+    '12+': 'established',
+  };
+
+  const DOCS_MAP: Record<string, string> = {
+    bank: 'local_bank_account',
+    sim: 'local_phone',
+    address: 'proof_of_address',
+    secu: 'social_security_number',
+    vitale: 'health_card',
+    visa: 'residence_permit',
+    fiscal: 'tax_number',
+    caf: 'benefits_number',
+  };
+
   const next = async () => {
     if (step < TOTAL) {
       setDir(1);
       setStep(step + 1);
     } else {
-      // Convert frontend data to backend IntakeRequest format
+      const mappedStatus = STATUS_MAP[onboarding.status] ?? onboarding.status;
+      const isStudent = onboarding.status === 'student';
+
+      const alreadyHas = Object.entries(onboarding.documents)
+        .filter(([, checked]) => checked)
+        .map(([key]) => DOCS_MAP[key] ?? key);
+
       const intakeData: IntakeRequest = {
-        country_of_residence: onboarding.toCountry,
-        country_moving_to: onboarding.toCountry,
+        // Identity
         first_name: onboarding.name.split(' ')[0] || 'User',
         last_name: onboarding.name.split(' ').slice(1).join(' ') || '',
-        date_of_birth: '1990-01-01',
+        date_of_birth: '1990-01-01',        // not collected in the form
         nationality: onboarding.fromCountry,
-        employment_status: onboarding.status,
-        has_income: true,
-        income_bracket: 'mid',
+        // Origin & destination
+        country_of_residence: onboarding.fromCountry,
+        country_moving_to: onboarding.toCountry,
+        // Situation
+        employment_status: mappedStatus,
+        has_income: !isStudent,
+        income_bracket: isStudent ? undefined : 'mid',
         currency: 'EUR',
+        // Destination context
+        time_at_destination: TIME_MAP[onboarding.timeInFrance] ?? undefined,
+        has_financial_ties_abroad: onboarding.hasHomeTies ?? undefined,
+        already_has: alreadyHas.length > 0 ? alreadyHas : undefined,
+        // Goals
         goals: onboarding.goals,
       };
 
@@ -71,7 +110,7 @@ function Onboarding() {
     switch (step) {
       case 1: return onboarding.name.trim().length > 0;
       case 2: return !!onboarding.fromCountry;
-      case 3: return true;
+      case 3: return !!onboarding.toCountry;
       case 4: return onboarding.goals.length > 0;
       case 5: return !!onboarding.status;
       case 6: return !!onboarding.timeInFrance;
@@ -135,7 +174,12 @@ function Onboarding() {
                 onSelect={(country, code) => setOnboarding({ fromCountry: country, fromCountryFlag: code })}
               />
             )}
-            {step === 3 && <Step3Destination />}
+            {step === 3 && (
+              <Step3Destination
+                value={onboarding.toCountry}
+                onSelect={(country, code) => setOnboarding({ toCountry: country, fromCountryFlag: code })}
+              />
+            )}
             {step === 4 && (
               <Step4Goals
                 selected={onboarding.goals}
@@ -149,7 +193,11 @@ function Onboarding() {
               <Step5Status value={onboarding.status} onSelect={(v) => setOnboarding({ status: v })} />
             )}
             {step === 6 && (
-              <Step6Time value={onboarding.timeInFrance} onSelect={(v) => setOnboarding({ timeInFrance: v })} />
+              <Step6Time
+                value={onboarding.timeInFrance}
+                destination={onboarding.toCountry || "your destination"}
+                onSelect={(v) => setOnboarding({ timeInFrance: v })}
+              />
             )}
             {step === 7 && (
               <Step7HomeTies value={onboarding.hasHomeTies} onSelect={(v) => setOnboarding({ hasHomeTies: v })} />
@@ -218,14 +266,22 @@ function Step1Name({ value, onChange }: { value: string; onChange: (v: string) =
 }
 
 const COUNTRIES: { name: string; code: CountryCode }[] = [
-  { name: "Ukraine", code: "UA" },
-  { name: "Morocco", code: "MA" },
-  { name: "India", code: "IN" },
-  { name: "Spain", code: "ES" },
-  { name: "USA", code: "US" },
-  { name: "United Kingdom", code: "GB" },
-  { name: "Brazil", code: "BR" },
+  { name: "France", code: "FR" },
   { name: "Germany", code: "DE" },
+  { name: "United Kingdom", code: "GB" },
+  { name: "Spain", code: "ES" },
+  { name: "Netherlands", code: "NL" },
+  { name: "Belgium", code: "BE" },
+  { name: "Switzerland", code: "CH" },
+  { name: "Canada", code: "CA" },
+  { name: "USA", code: "US" },
+  { name: "UAE", code: "AE" },
+  { name: "Saudi Arabia", code: "SA" },
+  { name: "Morocco", code: "MA" },
+  { name: "Ukraine", code: "UA" },
+  { name: "India", code: "IN" },
+  { name: "Brazil", code: "BR" },
+  { name: "Japan", code: "JP" },
 ];
 
 function Step2Origin({ value, onSelect }: { value: string; onSelect: (n: string, c: string) => void }) {
@@ -268,45 +324,41 @@ function Step2Origin({ value, onSelect }: { value: string; onSelect: (n: string,
   );
 }
 
-function Step3Destination() {
+function Step3Destination({ value, onSelect }: { value: string; onSelect: (n: string, c: string) => void }) {
+  const [q, setQ] = useState("");
+  const filtered = COUNTRIES.filter((c) => c.name.toLowerCase().includes(q.toLowerCase()));
   return (
     <>
-      <StepHeader bubble="France! Excellent choice. Croissants included." h1="And you're heading to..." />
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.1 }}
-        className="relative bg-gradient-lemon rounded-[24px] p-6 shadow-lemon-lg border border-black/15"
-      >
-        <div className="flex items-start justify-between">
-          <div>
-            <h2 className="font-display font-black text-black text-[34px] leading-none tracking-[-1px]">France</h2>
-            <p className="mt-2 text-black/60 text-[13px] font-body font-semibold">
-              Paris · Lyon · Marseille · everywhere
-            </p>
-          </div>
-          <Flag code="FR" size={56} />
-        </div>
-        <div className="mt-5 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black text-lemon text-[11px] font-ui font-bold uppercase tracking-[1.5px]">
-          <IconCheck size={12} /> Selected
-        </div>
-      </motion.div>
-
-      <p className="mt-6 mb-3 text-white-40 text-[11px] font-ui font-bold uppercase tracking-[1.5px]">
-        Coming soon
-      </p>
-      <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-5 px-5">
-        {(["DE", "NL", "BE"] as CountryCode[]).map((code) => (
-          <div key={code} className="shrink-0 w-32 p-3 rounded-[14px] bg-navy border border-white-10 opacity-60">
-            <div className="flex items-center justify-between mb-2">
-              <Flag code={code} size={28} />
-              <IconLock size={14} className="text-white-40" />
-            </div>
-            <p className="text-white text-[12px] font-bold font-body">
-              {code === "DE" ? "Germany" : code === "NL" ? "Netherlands" : "Belgium"}
-            </p>
-          </div>
-        ))}
+      <StepHeader bubble="Where's the adventure? Pick your destination." h1="And you're heading to..." />
+      <div className="relative mb-4">
+        <IconSearch size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-lemon" />
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search countries..."
+          className="w-full h-12 pl-12 pr-4 rounded-[14px] bg-navy text-white text-[14px] placeholder:text-white-40 outline-none font-body"
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        {filtered.map((c) => {
+          const active = value === c.name;
+          return (
+            <button
+              key={c.code}
+              onClick={() => onSelect(c.name, c.code)}
+              className={`flex items-center gap-2.5 p-3.5 rounded-[16px] border transition-all active:scale-[0.97] ${
+                active
+                  ? "bg-gradient-lemon border-black/20 shadow-lemon scale-[1.02]"
+                  : "bg-navy border-white-10"
+              }`}
+            >
+              <Flag code={c.code} size={32} />
+              <span className={`text-[14px] font-bold font-body text-left ${active ? "text-black" : "text-white"}`}>
+                {c.name}
+              </span>
+            </button>
+          );
+        })}
       </div>
     </>
   );
@@ -395,10 +447,10 @@ const TIMES = [
   { key: "12+", title: "I'm practically local", sub: "over a year" },
 ];
 
-function Step6Time({ value, onSelect }: { value: string; onSelect: (v: string) => void }) {
+function Step6Time({ value, destination, onSelect }: { value: string; destination: string; onSelect: (v: string) => void }) {
   return (
     <>
-      <StepHeader bubble="How long navigating this beautiful chaos?" h1="How long in France?" />
+      <StepHeader bubble="How long navigating this beautiful chaos?" h1={`How long in ${destination}?`} />
       <div className="space-y-3">
         {TIMES.map((t) => {
           const active = value === t.key;

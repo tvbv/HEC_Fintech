@@ -1,67 +1,81 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "@tanstack/react-router";
 import { Cleo } from "./Cleo";
 import { IconClose } from "./Icons";
-
-const TIPS_BY_ROUTE: Record<string, string[]> = {
-  "/home": [
-    "Tap a glowing node to continue your quest.",
-    "Streaks unlock bonus XP — come back daily.",
-    "Each section opens after the boss before it.",
-  ],
-  "/dashboard": [
-    "Hidden benefits could add €1,200/year — let's claim them.",
-    "Tap a card to see exactly where the money goes.",
-  ],
-  "/deadlines": [
-    "Red = urgent. Lemon = chill. I'll nudge you in time.",
-    "Mark a quest done and earn instant XP.",
-  ],
-  "/profile": [
-    "Level up by completing quests! Each level unlocks new tools.",
-  ],
-  "/level/banking": [
-    "Neobanks open in 10 minutes — perfect first move.",
-    "Pick what fits YOU, not just what's popular.",
-  ],
-  "/level/taxes": [
-    "First year? Paper declaration. Welcome to French tradition.",
-    "I'll remind you weeks before the deadline — promise.",
-  ],
-  "/level/benefits": [
-    "Most newcomers miss CAF — that alone is €200/mo.",
-    "Eligibility is rarely all-or-nothing. Always worth a check.",
-  ],
-};
+import { sendChat, type ChatMessage } from "@/lib/api";
+import { useApp } from "@/lib/store";
 
 const HIDE_ON = new Set(["/", "/onboarding", "/loading"]);
 
+const WELCOME: ChatMessage = {
+  role: "assistant",
+  content: "Hey! I'm Cleo. Ask me anything about banking, admin, visas, taxes — wherever you're headed. I'll look it up in real time.",
+};
+
 export function CleoCompanion() {
   const { pathname } = useLocation();
+  const { profileId } = useApp();
   const [open, setOpen] = useState(false);
-  const [tipIndex, setTipIndex] = useState(0);
-  const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [history, setHistory] = useState<ChatMessage[]>([WELCOME]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const tips = TIPS_BY_ROUTE[pathname] ?? TIPS_BY_ROUTE["/home"];
   const hidden = HIDE_ON.has(pathname);
 
+  // Auto-open after 8 seconds of inactivity on a page
   useEffect(() => {
     if (hidden) return;
-    setOpen(false);
-    setTipIndex(0);
-    if (idleTimer.current) clearTimeout(idleTimer.current);
-    idleTimer.current = setTimeout(() => setOpen(true), 6000);
-    return () => {
-      if (idleTimer.current) clearTimeout(idleTimer.current);
-    };
+    const t = setTimeout(() => setOpen(true), 8000);
+    return () => clearTimeout(t);
   }, [pathname, hidden]);
+
+  // Scroll to bottom when new messages arrive
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [history, loading]);
+
+  // Focus input when chat opens
+  useEffect(() => {
+    if (open) setTimeout(() => inputRef.current?.focus(), 150);
+  }, [open]);
 
   if (hidden) return null;
 
-  const handleTap = () => {
-    if (open) setTipIndex((i) => (i + 1) % tips.length);
-    else setOpen(true);
+  const handleSend = async () => {
+    const msg = input.trim();
+    if (!msg || loading) return;
+
+    const userMessage: ChatMessage = { role: "user", content: msg };
+    const updatedHistory = [...history, userMessage];
+    setHistory(updatedHistory);
+    setInput("");
+    setLoading(true);
+
+    try {
+      // Send full history minus the welcome message (which is UI-only)
+      const apiHistory = updatedHistory.filter((m) => !(m === WELCOME));
+      const { reply } = await sendChat(
+        profileId ?? 0,
+        msg,
+        // exclude the just-added user message from history (it's the current message)
+        apiHistory.slice(0, -1),
+      );
+      setHistory((h) => [...h, { role: "assistant", content: reply }]);
+    } catch {
+      setHistory((h) => [
+        ...h,
+        { role: "assistant", content: "Oops, I couldn't reach the server. Try again in a sec." },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") handleSend();
   };
 
   return (
@@ -73,46 +87,116 @@ export function CleoCompanion() {
       }}
     >
       <div className="relative pointer-events-auto">
+
+        {/* Chat panel */}
         <AnimatePresence>
           {open && (
             <motion.div
-              key={`tip-${pathname}-${tipIndex}`}
-              initial={{ opacity: 0, y: 6, scale: 0.92 }}
+              key="chat-panel"
+              initial={{ opacity: 0, y: 12, scale: 0.93 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 6, scale: 0.92 }}
-              transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-              className="absolute bottom-[60px] right-0 w-[220px]"
+              exit={{ opacity: 0, y: 12, scale: 0.93 }}
+              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+              className="absolute bottom-[68px] right-0 w-[300px] flex flex-col rounded-[20px] rounded-br-[6px] bg-[#0d0d14] border border-white/10 shadow-[0_8px_40px_rgba(0,0,0,0.6)] overflow-hidden"
+              style={{ maxHeight: "420px" }}
             >
-              <div className="relative bg-white rounded-[18px] rounded-br-[4px] px-3.5 py-3 border border-black/10 shadow-deep">
+              {/* Header */}
+              <div className="flex items-center gap-2.5 px-4 py-3 border-b border-white/8 bg-[#141420]">
+                <div className="scale-75 -ml-1">
+                  <Cleo pose="idle" mood="happy" size={36} animated />
+                </div>
+                <div className="flex-1">
+                  <p className="text-white text-[13px] font-bold font-display leading-none">Cleo</p>
+                  <p className="text-white/40 text-[11px] font-body mt-0.5">Your relocation concierge</p>
+                </div>
                 <button
                   onClick={() => setOpen(false)}
-                  className="absolute -top-2 -left-2 h-6 w-6 rounded-full bg-black text-white flex items-center justify-center active:scale-95"
-                  aria-label="Dismiss"
+                  className="h-7 w-7 rounded-full bg-white/8 flex items-center justify-center text-white/60 active:scale-90 transition-transform"
                 >
                   <IconClose size={12} />
                 </button>
-                <p className="text-black text-[12.5px] font-semibold italic leading-snug font-body">
-                  {tips[tipIndex]}
-                </p>
+              </div>
+
+              {/* Messages */}
+              <div className="flex-1 overflow-y-auto px-3 py-3 space-y-2.5" style={{ minHeight: 0 }}>
+                {history.map((msg, i) => (
+                  <div
+                    key={i}
+                    className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                  >
+                    <div
+                      className={`max-w-[85%] px-3.5 py-2.5 rounded-[14px] text-[12.5px] font-body leading-snug ${
+                        msg.role === "user"
+                          ? "bg-lemon text-black rounded-br-[4px]"
+                          : "bg-white/8 text-white rounded-bl-[4px]"
+                      }`}
+                    >
+                      {msg.content}
+                    </div>
+                  </div>
+                ))}
+
+                {loading && (
+                  <div className="flex justify-start">
+                    <div className="px-3.5 py-2.5 rounded-[14px] rounded-bl-[4px] bg-white/8">
+                      <span className="flex gap-1 items-center h-4">
+                        {[0, 1, 2].map((i) => (
+                          <motion.span
+                            key={i}
+                            className="h-1.5 w-1.5 rounded-full bg-white/40"
+                            animate={{ opacity: [0.3, 1, 0.3] }}
+                            transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
+                          />
+                        ))}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                <div ref={bottomRef} />
+              </div>
+
+              {/* Input */}
+              <div className="px-3 py-2.5 border-t border-white/8 bg-[#141420] flex gap-2 items-center">
+                <input
+                  ref={inputRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Ask Cleo anything..."
+                  disabled={loading}
+                  className="flex-1 h-9 px-3 rounded-[10px] bg-white/8 text-white text-[12.5px] font-body placeholder:text-white/30 outline-none disabled:opacity-50"
+                />
+                <button
+                  onClick={handleSend}
+                  disabled={!input.trim() || loading}
+                  className="h-9 w-9 rounded-[10px] bg-lemon flex items-center justify-center active:scale-90 transition-transform disabled:opacity-40"
+                >
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <path d="M13 1L1 7l5 1.5L7 13l6-12z" fill="black" />
+                  </svg>
+                </button>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
+        {/* Floating Cleo button */}
         <motion.button
-          onClick={handleTap}
+          onClick={() => setOpen((o) => !o)}
           whileTap={{ scale: 0.9 }}
           animate={{ y: [0, -4, 0] }}
           transition={{ y: { duration: 2.6, repeat: Infinity, ease: "easeInOut" } }}
           className="relative h-14 w-14 rounded-full bg-lemon flex items-center justify-center shadow-lemon"
           style={{ border: "2px solid #000" }}
-          aria-label="Open Cleo tips"
+          aria-label="Open Cleo chat"
         >
           <span className="absolute inset-0 rounded-full animate-pulse-lemon pointer-events-none" />
           <div className="scale-[0.7]">
             <Cleo pose="idle" mood="happy" size={56} animated />
           </div>
         </motion.button>
+
       </div>
     </div>
   );

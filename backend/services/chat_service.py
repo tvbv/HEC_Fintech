@@ -66,7 +66,7 @@ def _build_system_prompt(profile: dict | None, web_context: str) -> str:
             "settling_in": "3–12 months",
             "established": "more than a year",
         }
-        time_label = time_map.get(profile.get("time_in_france", ""), "unknown duration")
+        time_label = time_map.get(profile.get("time_at_destination", ""), "unknown duration")
 
         income_info = (
             f"yes ({profile.get('income_bracket', 'unspecified')})"
@@ -83,7 +83,7 @@ Origin country  : {origin}
 Destination     : {destination}
 Employment      : {profile.get("employment_status", "unknown")}
 Has income      : {income_info}
-Time at destination: {time_label}
+        Time at {destination}: {time_label}
 Financial ties abroad: {"yes" if profile.get("has_financial_ties_abroad") else "no"}
 Already has     : {", ".join(already) if already else "nothing specified"}
 Goals           : {", ".join(goals) if goals else "not specified"}

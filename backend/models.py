@@ -7,16 +7,16 @@ Sections:
 
 Allowed values — intake form
 ─────────────────────────────
-employment_status : "employed_fulltime" | "employed_parttime" | "freelance"
-                    | "student" | "between_jobs" | "retired"
+employment_status   : "employed_fulltime" | "employed_parttime" | "freelance"
+                      | "student" | "between_jobs" | "retired"
 
-time_in_france    : "just_arrived"   (< 3 months)
-                  | "settling_in"    (3–12 months)
-                  | "established"    (> 1 year)
+time_at_destination : "just_arrived"   (< 3 months)
+                    | "settling_in"    (3–12 months)
+                    | "established"    (> 1 year)
 
-already_has items : "french_bank_account" | "french_phone" | "proof_of_address"
-                  | "social_security_number" | "carte_vitale" | "residence_permit"
-                  | "french_tax_number" | "caf_number"
+already_has items   : "local_bank_account" | "local_phone" | "proof_of_address"
+                    | "social_security_number" | "health_card" | "residence_permit"
+                    | "tax_number" | "benefits_number"
 """
 
 from __future__ import annotations
@@ -26,16 +26,16 @@ from typing import Literal, Optional
 from pydantic import BaseModel
 
 # Shorthand type aliases used by IntakeRequest
-TimeInFrance = Literal["just_arrived", "settling_in", "established"]
+TimeAtDestination = Literal["just_arrived", "settling_in", "established"]
 AlreadyHasItem = Literal[
-    "french_bank_account",
-    "french_phone",
+    "local_bank_account",
+    "local_phone",
     "proof_of_address",
     "social_security_number",
-    "carte_vitale",
+    "health_card",
     "residence_permit",
-    "french_tax_number",
-    "caf_number",
+    "tax_number",
+    "benefits_number",
 ]
 
 # ---------------------------------------------------------------------------
@@ -62,9 +62,9 @@ class IntakeRequest(BaseModel):
     income_bracket: Optional[str] = None   # required when has_income is True
     currency: Optional[str] = "EUR"        # ISO 4217
 
-    # ── France-specific context (new questions) ──────────────────────
-    time_in_france: Optional[TimeInFrance] = None
-    # "How long in France?" → "just_arrived" | "settling_in" | "established"
+    # ── Destination context ───────────────────────────────────────────
+    time_at_destination: Optional[TimeAtDestination] = None
+    # "How long at destination?" → "just_arrived" | "settling_in" | "established"
 
     has_financial_ties_abroad: Optional[bool] = None
     # "Financial ties back home?" → True = yes / False = just France
@@ -97,8 +97,8 @@ class GetProfileResponse(BaseModel):
     income_bracket: Optional[str] = None
     currency: Optional[str] = None
     goals: Optional[list[str]] = None
-    # France-specific context
-    time_in_france: Optional[str] = None
+    # Destination context
+    time_at_destination: Optional[str] = None
     has_financial_ties_abroad: Optional[bool] = None
     already_has: Optional[list[str]] = None
     created_at: Optional[str] = None

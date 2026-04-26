@@ -11,7 +11,7 @@ Functions:
 
 JSON-encoded list columns (stored as strings, decoded on read):
 - goals       : e.g. '["banking", "taxes"]'
-- already_has : e.g. '["french_phone", "proof_of_address"]'
+- already_has : e.g. '["local_phone", "proof_of_address"]'
 """
 
 from __future__ import annotations
@@ -50,11 +50,11 @@ class Profile(Base):
     has_income = Column(Boolean, nullable=False)
     income_bracket = Column(String, nullable=True)
     currency = Column(String(3), nullable=True)
-    goals = Column(String, nullable=True)              # JSON-encoded list
-    # France-specific context
-    time_in_france = Column(String, nullable=True)     # "just_arrived" | "settling_in" | "established"
+    goals = Column(String, nullable=True)                   # JSON-encoded list
+    # Destination-specific context
+    time_at_destination = Column(String, nullable=True)     # "just_arrived" | "settling_in" | "established"
     has_financial_ties_abroad = Column(Boolean, nullable=True)
-    already_has = Column(String, nullable=True)        # JSON-encoded list
+    already_has = Column(String, nullable=True)             # JSON-encoded list
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
