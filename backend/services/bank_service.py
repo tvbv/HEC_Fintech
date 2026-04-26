@@ -1,7 +1,21 @@
-"""Bank recommendation service using Cerebras AI."""
+"""
+Bank recommendation service.
+
+Loads a static JSON catalogue of banks and uses Cerebras (llama3.1-8b)
+to generate personalised recommendations for expats moving to France.
+
+Features:
+- Dynamic system prompt built from catalogue data
+- In-memory cache (TTL 1 hour) keyed on profile hash
+- Cache is bypassed when documents are provided
+- Full bank data merged into each recommendation after LLM response
+"""
+
+from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import os
 import time
 from pathlib import Path
@@ -10,10 +24,13 @@ from cerebras.cloud.sdk import Cerebras
 from fastapi import HTTPException
 from models import Document, UserProfile
 
-# ─────────────────────────────────────────────
-# RESPONSE SCHEMA FOR STRUCTURED OUTPUT
-# ─────────────────────────────────────────────
-RESPONSE_SCHEMA = {
+logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Response schema communicated to the LLM
+# ---------------------------------------------------------------------------
+
+RESPONSE_SCHEMA: dict = {
     "type": "object",
     "properties": {
         "recommendations": {
@@ -39,41 +56,97 @@ RESPONSE_SCHEMA = {
     "required": ["recommendations", "profile_summary"],
 }
 
+_CATALOG_PATH = Path(__file__).parent.parent / "data" / "banks.france.json"
+_CACHE_TTL_SECONDS = 3600
+
 
 class BankService:
-    """Service for bank recommendations and catalog management."""
+    """Handles bank catalogue management and AI-powered recommendations."""
 
-    def __init__(self):
-        """Initialize the bank service with Cerebras client and load catalog."""
-        self.cerebras_client = Cerebras(api_key=os.environ.get("CEREBRAS_API_KEY"))
-        self.catalog = []
-        self.index = {}
-        self._cache = {}
-        self.CACHE_TTL_SECONDS = 3600
-        self.load_catalog()
+    def __init__(self) -> None:
+        self._cerebras = Cerebras(api_key=os.environ.get("CEREBRAS_API_KEY", ""))
+        self._catalog: list[dict] = []
+        self._index: dict[str, dict] = {}
+        self._cache: dict[str, dict] = {}
+        self._load_catalog()
 
-    def load_catalog(self) -> None:
-        """Load the bank catalog from JSON file."""
-        # Path to banks.france.json in data directory
-        catalog_path = Path(__file__).parent.parent / "data" / "banks.france.json"
+    # ------------------------------------------------------------------
+    # Catalogue
+    # ------------------------------------------------------------------
 
+    def _load_catalog(self) -> None:
+        """Load the bank catalogue from the JSON file at startup."""
         try:
-            with open(catalog_path, encoding="utf-8") as f:
-                self.catalog = json.load(f)
-            self.index = {bank["id"]: bank for bank in self.catalog}
-            print(f"✓ Catalogue chargé — {len(self.catalog)} banques")
+            with open(_CATALOG_PATH, encoding="utf-8") as fh:
+                self._catalog = json.load(fh)
+            self._index = {bank["id"]: bank for bank in self._catalog}
+            logger.info("Bank catalogue loaded — %d banks.", len(self._catalog))
         except FileNotFoundError:
-            print(f"⚠️  Catalogue not found at {catalog_path}")
-            self.catalog = []
-            self.index = {}
+            logger.warning("Bank catalogue not found at %s.", _CATALOG_PATH)
 
-    def build_system_prompt(self) -> str:
-        """Build the system prompt for the Cerebras model."""
-        lines = []
-        for b in self.catalog:
-            req = b["opening_requirements"]
-            fees = b["fees"]
+    def get_all_banks(self) -> list[dict]:
+        """Return the full bank catalogue."""
+        return self._catalog
 
+    def get_bank_by_id(self, bank_id: str) -> dict:
+        """
+        Return a single bank's data by its ID.
+
+        Raises:
+            HTTPException 404: if the bank_id is not in the catalogue.
+        """
+        bank = self._index.get(bank_id)
+        if not bank:
+            raise HTTPException(status_code=404, detail=f"Bank '{bank_id}' not found.")
+        return bank
+
+    # ------------------------------------------------------------------
+    # Recommendation
+    # ------------------------------------------------------------------
+
+    def get_recommendations(
+        self,
+        profile: UserProfile,
+        documents: list[Document] | None = None,
+    ) -> dict:
+        """
+        Return 3 personalised bank recommendations.
+
+        Uses an in-memory cache (TTL 1 h) when no documents are provided.
+
+        Args:
+            profile:   Expat user profile.
+            documents: Optional list of base64-encoded documents.
+
+        Returns:
+            Dict with 'recommendations', 'profile_summary', and optional
+            'missing_info' / 'combo_suggestion' keys.
+        """
+        docs = documents or []
+
+        if docs:
+            return self._call_cerebras(profile, docs)
+
+        cache_key = self._cache_key(profile)
+        cached = self._cache.get(cache_key)
+        if cached and (time.monotonic() - cached["ts"]) < _CACHE_TTL_SECONDS:
+            logger.debug("Cache HIT for key %s.", cache_key)
+            return {**cached["data"], "from_cache": True}
+
+        result = self._call_cerebras(profile, docs)
+        self._cache[cache_key] = {"data": result, "ts": time.monotonic()}
+        return result
+
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
+
+    def _build_system_prompt(self) -> str:
+        """Build the Cerebras system prompt dynamically from the catalogue."""
+        lines: list[str] = []
+        for bank in self._catalog:
+            req = bank["opening_requirements"]
+            fees = bank["fees"]
             monthly_note = (
                 f" ({fees['monthly_fee_note']})" if fees.get("monthly_fee_note") else ""
             )
@@ -83,30 +156,29 @@ class BankService:
                 else "NON"
             )
             multi = (
-                f"OUI ({b['features']['supported_currencies']} devises)"
-                if b["features"]["multi_currency"]
+                f"OUI ({bank['features']['supported_currencies']} devises)"
+                if bank["features"]["multi_currency"]
                 else "NON"
             )
-            credit_types = ", ".join(b["features"].get("credit_types") or [])
-            credit = f"OUI ({credit_types})" if b["features"]["credit"] else "NON"
+            credit_types = ", ".join(bank["features"].get("credit_types") or [])
+            credit = f"OUI ({credit_types})" if bank["features"]["credit"] else "NON"
 
             lines.append(
-                f"""### {b["name"]} (id: "{b["id"]}") — {b["type"]}
-- IBAN : {b["features"]["iban_type"]}
+                f"""### {bank["name"]} (id: "{bank["id"]}") — {bank["type"]}
+- IBAN : {bank["features"]["iban_type"]}
 - Frais mensuels : {fees["monthly_fee_eur"]}€{monthly_note}
 - Adresse française requise : {"OUI" if req["requires_french_address"] else "NON"}
 - Justificatif de revenus requis : {income_note}
 - Multi-devises : {multi}
-- Langues : {", ".join(b["languages_supported"])}
+- Langues : {", ".join(bank["languages_supported"])}
 - Crédit disponible : {credit}
-- Idéal pour : {", ".join(b["ideal_for"])}
-- Points forts : {" | ".join(b["strengths"][:3])}
-- Points faibles : {" | ".join(b["weaknesses"][:2])}
-- Score expat de base : {b["expat_score"]}/10"""
+- Idéal pour : {", ".join(bank["ideal_for"])}
+- Points forts : {" | ".join(bank["strengths"][:3])}
+- Points faibles : {" | ".join(bank["weaknesses"][:2])}
+- Score expat de base : {bank["expat_score"]}/10"""
             )
 
         bank_list = "\n\n".join(lines)
-
         return f"""Tu es un conseiller financier expert en banques pour expatriés s'installant en France.
 
 Voici le catalogue complet des banques disponibles :
@@ -132,16 +204,20 @@ RÈGLES STRICTES :
 6. Mentionne les warnings importants (ex: IBAN non-FR refusé par certains employeurs).
 7. Ajoute un tip pratique si tu en as un (ex: "Ouvre le compte CIC depuis ton pays d'origine avant d'arriver")."""
 
-    def call_cerebras(
-        self, user_profile: UserProfile, documents: list[Document]
+    def _call_cerebras(
+        self, profile: UserProfile, documents: list[Document]
     ) -> dict:
-        """Call Cerebras API for bank recommendations."""
-        system = self.build_system_prompt()
+        """
+        Call the Cerebras API and return parsed + enriched recommendations.
 
+        Raises:
+            HTTPException 500: on any Cerebras API or JSON parsing error.
+        """
+        system = self._build_system_prompt()
         doc_mention = " et les documents ci-dessous" if documents else ""
         user_text = (
             f"PROFIL DE L'EXPATRIÉ :\n"
-            f"{json.dumps(user_profile.model_dump(), ensure_ascii=False, indent=2)}\n\n"
+            f"{json.dumps(profile.model_dump(), ensure_ascii=False, indent=2)}\n\n"
             f"Analyse ce profil{doc_mention}, puis retourne tes 3 meilleures recommandations "
             f"bancaires personnalisées en JSON strict respectant ce schéma :\n"
             f"{json.dumps(RESPONSE_SCHEMA, ensure_ascii=False)}\n\n"
@@ -149,7 +225,7 @@ RÈGLES STRICTES :
         )
 
         try:
-            response = self.cerebras_client.chat.completions.create(
+            response = self._cerebras.chat.completions.create(
                 model="llama3.1-8b",
                 messages=[
                     {"role": "system", "content": system},
@@ -159,39 +235,39 @@ RÈGLES STRICTES :
                 temperature=0.3,
                 response_format={"type": "json_object"},
             )
-
             raw = response.choices[0].message.content.strip()
-            parsed = json.loads(raw)
+            parsed: dict = json.loads(raw)
+        except Exception:
+            logger.error("Cerebras API call failed.", exc_info=True)
+            raise HTTPException(
+                status_code=500, detail="Bank recommendation service is unavailable."
+            )
 
-            # Enrich recommendations with full bank data
-            for rec in parsed.get("recommendations", []):
-                full_bank = self.index.get(rec["id"])
-                if full_bank:
-                    rec.update(
-                        {
-                            "url": full_bank["url"],
-                            "logo_url": full_bank.get("logo_url"),
-                            "type": full_bank["type"],
-                            "opening_time": full_bank.get("opening_time"),
-                            "customer_support": full_bank.get("customer_support"),
-                            "features_summary": {
-                                "iban_type": full_bank["features"]["iban_type"],
-                                "multi_currency": full_bank["features"][
-                                    "multi_currency"
-                                ],
-                                "credit": full_bank["features"]["credit"],
-                                "mobile_app": full_bank["features"]["mobile_app"],
-                                "monthly_fee_eur": full_bank["fees"]["monthly_fee_eur"],
-                            },
-                        }
-                    )
+        for rec in parsed.get("recommendations", []):
+            full_bank = self._index.get(rec.get("id", ""))
+            if full_bank:
+                rec.update(
+                    {
+                        "url": full_bank["url"],
+                        "logo_url": full_bank.get("logo_url"),
+                        "type": full_bank["type"],
+                        "opening_time": full_bank.get("opening_time"),
+                        "customer_support": full_bank.get("customer_support"),
+                        "features_summary": {
+                            "iban_type": full_bank["features"]["iban_type"],
+                            "multi_currency": full_bank["features"]["multi_currency"],
+                            "credit": full_bank["features"]["credit"],
+                            "mobile_app": full_bank["features"]["mobile_app"],
+                            "monthly_fee_eur": full_bank["fees"]["monthly_fee_eur"],
+                        },
+                    }
+                )
 
-            return parsed
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Cerebras API error: {str(e)}")
+        return parsed
 
-    def _get_cache_key(self, profile: UserProfile) -> str:
-        """Generate cache key from user profile."""
+    @staticmethod
+    def _cache_key(profile: UserProfile) -> str:
+        """Generate a stable MD5 cache key from the profile's relevant fields."""
         key_data = {
             "nationality": profile.nationality,
             "has_french_address": profile.has_french_address,
@@ -200,63 +276,10 @@ RÈGLES STRICTES :
             "needs": sorted(profile.needs),
             "situation": profile.situation,
         }
-        return hashlib.md5(json.dumps(key_data, sort_keys=True).encode()).hexdigest()
-
-    def get_recommendations(
-        self, profile: UserProfile, documents: list[Document] = None
-    ) -> dict:
-        """
-        Get bank recommendations with optional caching.
-
-        Args:
-            profile: User profile for recommendations
-            documents: Optional list of documents to analyze
-
-        Returns:
-            Dictionary with recommendations and analysis
-        """
-        if documents is None:
-            documents = []
-
-        # Skip cache if documents are provided
-        if documents:
-            return self.call_cerebras(profile, documents)
-
-        # Check cache
-        cache_key = self._get_cache_key(profile)
-        cached = self._cache.get(cache_key)
-
-        if cached and (time.time() - cached["timestamp"]) < self.CACHE_TTL_SECONDS:
-            print(f"[Cache HIT] {cache_key}")
-            return {**cached["data"], "from_cache": True}
-
-        # Call API and cache result
-        result = self.call_cerebras(profile, documents)
-        self._cache[cache_key] = {"data": result, "timestamp": time.time()}
-        return result
-
-    def get_all_banks(self) -> list[dict]:
-        """Get all banks from catalog."""
-        return self.catalog
-
-    def get_bank_by_id(self, bank_id: str) -> dict:
-        """
-        Get a specific bank by ID.
-
-        Args:
-            bank_id: The bank ID
-
-        Returns:
-            Bank data dictionary
-
-        Raises:
-            HTTPException: If bank not found
-        """
-        bank = self.index.get(bank_id)
-        if not bank:
-            raise HTTPException(status_code=404, detail=f"Bank '{bank_id}' not found")
-        return bank
+        return hashlib.md5(
+            json.dumps(key_data, sort_keys=True).encode()
+        ).hexdigest()
 
 
-# Singleton instance
+# Module-level singleton
 bank_service = BankService()

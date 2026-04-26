@@ -1,4 +1,17 @@
-"""Document extraction service — routes files to the correct extractor."""
+"""
+Document extraction service.
+
+Routes uploaded files to the appropriate extraction pipeline:
+- PDF  → pdfplumber (text extraction) → Cerebras llama3.1-8b
+- Image (JPG/PNG/WebP) → Mistral OCR → Mistral chat
+- TXT  → Cerebras directly
+
+Returns a normalised dict with keys:
+    first_name, last_name, date_of_birth, nationality, document_type
+All values may be None if the model cannot identify them with confidence.
+"""
+
+from __future__ import annotations
 
 import base64
 import io
@@ -13,16 +26,16 @@ from mistralai import Mistral
 
 logger = logging.getLogger(__name__)
 
-IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
-ALLOWED_EXTENSIONS = {".pdf", ".txt"} | IMAGE_EXTENSIONS
-MAX_FILE_SIZE_MB = 10
-MAX_CHARS = 8_000
+IMAGE_EXTENSIONS: frozenset[str] = frozenset({".jpg", ".jpeg", ".png", ".webp"})
+ALLOWED_EXTENSIONS: frozenset[str] = frozenset({".pdf", ".txt"}) | IMAGE_EXTENSIONS
+MAX_FILE_SIZE_MB: int = 10
+MAX_CHARS: int = 8_000
 
 # ---------------------------------------------------------------------------
-# Prompts
+# LLM prompts
 # ---------------------------------------------------------------------------
 
-CEREBRAS_SYSTEM_PROMPT = """You are an expert at reading official documents.
+_CEREBRAS_SYSTEM_PROMPT = """You are an expert at reading official documents.
 From the document text provided, extract the following fields and return ONLY a valid JSON object:
 - first_name (string or null)
 - last_name (string or null)
@@ -36,7 +49,7 @@ Rules:
 - Dates must be strictly in YYYY-MM-DD format.
 - Nationality must be a 2-letter ISO 3166-1 alpha-2 code in uppercase."""
 
-MISTRAL_EXTRACTION_PROMPT = """You are a passport and ID document reader.
+_MISTRAL_EXTRACTION_PROMPT = """You are a passport and ID document reader.
 The text above was extracted from a passport or ID document via OCR.
 Extract the following fields and return ONLY a valid JSON object:
 - first_name (string or null)
@@ -51,8 +64,9 @@ Rules:
 - Dates must be strictly in YYYY-MM-DD format."""
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Shared helpers
 # ---------------------------------------------------------------------------
+
 
 def _empty_extraction() -> dict:
     return {
@@ -65,6 +79,14 @@ def _empty_extraction() -> dict:
 
 
 def _parse_llm_json(raw: str) -> dict:
+    """
+    Robustly parse a JSON object from an LLM response.
+
+    Handles:
+    - Markdown code fences (```json ... ```)
+    - Extra prose surrounding the JSON object
+    - Completely invalid output (returns empty dict)
+    """
     if "```" in raw:
         raw = re.sub(r"```(?:json)?", "", raw).replace("```", "").strip()
     try:
@@ -82,6 +104,13 @@ def _parse_llm_json(raw: str) -> dict:
 
 
 def _validate_and_clean(data: dict) -> dict:
+    """
+    Validate and sanitise extracted fields.
+
+    - Rejects date_of_birth that doesn't match YYYY-MM-DD.
+    - Rejects nationality that isn't exactly 2 letters (normalised to uppercase).
+    - Sets invalid / missing fields to None.
+    """
     result = _empty_extraction()
     for field in ("first_name", "last_name", "document_type"):
         val = data.get(field)
@@ -96,24 +125,33 @@ def _validate_and_clean(data: dict) -> dict:
     return result
 
 
+# ---------------------------------------------------------------------------
+# Service class
+# ---------------------------------------------------------------------------
+
+
 class DocumentService:
-    """Service for extracting structured fields from uploaded documents."""
+    """Routes uploaded files to the correct extraction pipeline."""
 
-    @staticmethod
-    def extract(file_bytes: bytes, filename: str, content_type: str) -> dict:
+    def extract(
+        self, file_bytes: bytes, filename: str, content_type: str
+    ) -> dict:
         """
-        Route the file to the correct extractor based on extension.
+        Entry point — validate the file then delegate to the right pipeline.
 
-        - Images (JPG, PNG, WebP) → Mistral OCR + Mistral chat
-        - PDFs → pdfplumber + Cerebras
-        - TXT → Cerebras directly
+        Args:
+            file_bytes:   Raw file content.
+            filename:     Original filename (used for extension detection).
+            content_type: MIME type from the multipart upload.
 
         Returns:
-            Dict with keys: first_name, last_name, date_of_birth, nationality, document_type.
+            Dict with keys: first_name, last_name, date_of_birth,
+            nationality, document_type (all may be None).
 
         Raises:
-            ValueError:   Invalid file type, empty file, size exceeded, or unreadable content.
-            RuntimeError: Missing API key.
+            ValueError:   Empty file, size exceeded, unsupported extension,
+                          or unreadable PDF content.
+            RuntimeError: Required API key not configured.
         """
         if not file_bytes:
             raise ValueError("The uploaded file is empty.")
@@ -121,28 +159,35 @@ class DocumentService:
         size_mb = len(file_bytes) / (1024 * 1024)
         if size_mb > MAX_FILE_SIZE_MB:
             raise ValueError(
-                f"File too large ({size_mb:.1f} MB). Maximum allowed size is {MAX_FILE_SIZE_MB} MB."
+                f"File too large ({size_mb:.1f} MB). "
+                f"Maximum allowed size is {MAX_FILE_SIZE_MB} MB."
             )
 
         ext = ("." + filename.rsplit(".", 1)[-1].lower()) if "." in filename else ""
         if ext not in ALLOWED_EXTENSIONS:
             raise ValueError(
                 f"Unsupported file type '{ext}'. "
-                f"Accepted formats: {', '.join(sorted(ALLOWED_EXTENSIONS))}."
+                f"Accepted: {', '.join(sorted(ALLOWED_EXTENSIONS))}."
             )
 
         if ext == ".pdf":
-            return DocumentService._extract_from_pdf(file_bytes)
-        elif ext in IMAGE_EXTENSIONS:
-            return DocumentService._extract_from_image(file_bytes, content_type or "image/jpeg")
-        else:
-            return DocumentService._extract_from_text(file_bytes.decode("utf-8", errors="ignore"))
+            return self._extract_from_pdf(file_bytes)
+        if ext in IMAGE_EXTENSIONS:
+            return self._extract_from_image(
+                file_bytes, content_type or "image/jpeg"
+            )
+        return self._extract_from_text(
+            file_bytes.decode("utf-8", errors="ignore")
+        )
 
-    @staticmethod
-    def _extract_from_pdf(file_bytes: bytes) -> dict:
-        """PDF → pdfplumber text → Cerebras."""
+    # ------------------------------------------------------------------
+    # Pipelines
+    # ------------------------------------------------------------------
+
+    def _extract_from_pdf(self, file_bytes: bytes) -> dict:
+        """PDF → pdfplumber text → Cerebras structured extraction."""
         try:
-            text_parts = []
+            text_parts: list[str] = []
             with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
                 if not pdf.pages:
                     raise ValueError("The PDF contains no pages.")
@@ -152,8 +197,8 @@ class DocumentService:
                         text_parts.append(page_text)
         except ValueError:
             raise
-        except Exception as e:
-            raise ValueError(f"Could not read PDF file: {e}") from e
+        except Exception as exc:
+            raise ValueError(f"Could not read PDF file: {exc}") from exc
 
         full_text = "\n".join(text_parts).strip()
         if not full_text:
@@ -161,12 +206,10 @@ class DocumentService:
                 "No text could be extracted from this PDF. "
                 "It may be a scanned image — please upload an image file (JPG/PNG) instead."
             )
+        return self._call_cerebras(full_text)
 
-        return DocumentService._call_cerebras(full_text)
-
-    @staticmethod
-    def _extract_from_image(image_bytes: bytes, mime_type: str) -> dict:
-        """Image → Mistral OCR → Mistral chat."""
+    def _extract_from_image(self, image_bytes: bytes, mime_type: str) -> dict:
+        """Image → Mistral OCR → Mistral chat structured extraction."""
         api_key = os.environ.get("MISTRAL_API_KEY")
         if not api_key:
             raise RuntimeError("MISTRAL_API_KEY is not configured.")
@@ -186,21 +229,28 @@ class DocumentService:
         chat_response = client.chat.complete(
             model="mistral-small-latest",
             messages=[
-                {"role": "user", "content": f"{ocr_text}\n\n{MISTRAL_EXTRACTION_PROMPT}"},
+                {
+                    "role": "user",
+                    "content": f"{ocr_text}\n\n{_MISTRAL_EXTRACTION_PROMPT}",
+                }
             ],
         )
         raw = chat_response.choices[0].message.content.strip()
         return _validate_and_clean(_parse_llm_json(raw))
 
-    @staticmethod
-    def _extract_from_text(text: str) -> dict:
-        """Plain text → Cerebras."""
+    def _extract_from_text(self, text: str) -> dict:
+        """Plain text → Cerebras structured extraction."""
         if not text.strip():
             raise ValueError("Empty text provided.")
-        return DocumentService._call_cerebras(text)
+        return self._call_cerebras(text)
 
-    @staticmethod
-    def _call_cerebras(text: str) -> dict:
+    def _call_cerebras(self, text: str) -> dict:
+        """
+        Call Cerebras llama3.1-8b and return validated extraction.
+
+        Raises:
+            RuntimeError: CEREBRAS_API_KEY not configured.
+        """
         api_key = os.environ.get("CEREBRAS_API_KEY")
         if not api_key:
             raise RuntimeError("CEREBRAS_API_KEY is not configured.")
@@ -209,8 +259,11 @@ class DocumentService:
         response = client.chat.completions.create(
             model="llama3.1-8b",
             messages=[
-                {"role": "system", "content": CEREBRAS_SYSTEM_PROMPT},
-                {"role": "user", "content": f"Document text:\n\n{text[:MAX_CHARS]}"},
+                {"role": "system", "content": _CEREBRAS_SYSTEM_PROMPT},
+                {
+                    "role": "user",
+                    "content": f"Document text:\n\n{text[:MAX_CHARS]}",
+                },
             ],
             temperature=0.1,
             max_tokens=300,
@@ -219,5 +272,5 @@ class DocumentService:
         return _validate_and_clean(_parse_llm_json(raw))
 
 
-# Singleton instance
+# Module-level singleton
 document_service = DocumentService()
