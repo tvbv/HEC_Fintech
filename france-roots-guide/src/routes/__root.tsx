@@ -88,7 +88,7 @@ function LanguageToggle() {
     <button
       onClick={toggle}
       title={lang === "fr" ? "Switch to English" : "Passer en français"}
-      className="fixed top-4 right-4 z-50 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold tracking-wide transition-all active:scale-95"
+      className="fixed bottom-20 left-4 z-50 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold tracking-wide transition-all active:scale-95"
       style={{ background: "rgba(255,255,255,0.1)", backdropFilter: "blur(12px)", color: "#fff", border: "1px solid rgba(255,255,255,0.2)" }}
     >
       <span style={{ fontSize: "1rem" }}>{lang === "fr" ? "🇬🇧" : "🇫🇷"}</span>
