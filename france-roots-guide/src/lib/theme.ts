@@ -29,17 +29,18 @@ export const buildingThemes: Record<BuildingId, BuildingTheme> = {
   aids:       { name: "Aides",       color: "#4ADE80", textColor: "#000" },
 };
 
+/** Ordre d’affichage / progression sur /city (priorité: Banque → Travail → Impôts → Aides). */
 export const buildingOrder: BuildingId[] = [
   "airport",
   "bank",
-  "housing",
   "work",
   "taxes",
+  "aids",
+  "housing",
   "insurance",
   "transport",
   "children",
   "retirement",
-  "aids",
 ];
 
 export const buildingRequiredDocs: Record<Exclude<BuildingId, "airport">, string[]> = {
