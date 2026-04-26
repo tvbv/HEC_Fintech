@@ -1,127 +1,108 @@
-## Goal
+## Objectifs
 
-Tighten the three level flows (Banking, Taxes, Benefits) into a cute, premium, visually-led mobile experience. Strip generic emojis, replace bank letter-circles with real logos, simplify each screen so visuals do more of the work, fix lingering color/contrast issues from the old coral/porcelain palette, and route every level's success state back to the quest map.
+Refonte profonde de plusieurs pages pour rendre l'app plus interactive, visuelle et cohérente avec la DA. Aucune nouvelle dépendance backend (tout reste dans le store Zustand local).
 
-## 1. Color & contrast cleanup (cross-cutting)
+## 1. Dashboard interactif (`src/routes/dashboard.tsx`)
 
-Audit and replace remaining legacy classes that look "off" against the black/navy/lemon system:
+Refonte visuelle complète avec graphiques SVG natifs (zéro lib externe pour rester léger):
+- **Hero "Solde total"** : grand nombre + mini sparkline SVG animée (12 derniers mois fictifs) en dégradé lemon→lilac.
+- **Donut SVG Revenus / Dépenses / Épargne** (3 segments, animé via `stroke-dasharray`), centre = solde net.
+- **Bar chart vertical** "Dépenses par catégorie" (5 barres animées, hauteur en %).
+- **Ring de progression XP** : cercle SVG avec % vers prochain niveau.
+- **Carte "Avantages actifs"** : grille de chips affichant `userBenefits` du store (ce qui répond au point précédent demandé).
+- **Tuile suggestion Cleo** conservée.
 
-- `level.banking.tsx` — many residues: `bg-white`, `text-ink/60`, `text-coral`, `border-coral`, `bg-white/30`, `bg-white/40`, `bg-coral/30`, hardcoded `linear-gradient(... #EF8354 ... #4F5D75 ...)` in ApplyStep + SuccessStep, `border-ink-black/10/60`.
-- Replace with system tokens: `card-navy`, `text-white`, `text-white-60`, `text-lemon`, `border-lemon`, `bg-gradient-hero-card`, `bg-gradient-lemon`, `card-hero`.
-- Compare modal: switch from white sheet to `bg-black` with `card-navy` rows, lemon highlight on the chosen bank.
-- Bottom sticky compare bar: replace white background with `glass-dark` (translucent black + lemon border).
+Toutes les formes utilisent les couleurs du design system (lemon, lilac, vivid-purple, vivid-orange, vivid-green) et apparaissent avec `animate-fade-in` séquencé.
 
-## 2. Bank logos (replace letter circles)
+## 2. Timeline progression avec icônes
 
-Add a small `BankLogo` component in `src/components/concierge/BankLogo.tsx` that returns a hand-tuned inline SVG per bank — no remote dependencies, no broken images.
+Remplacer la grille 4 colonnes actuelle par une **vraie timeline horizontale scrollable** :
+- Une ligne pointillée traverse les bâtiments.
+- Chaque étape = cercle avec icône SVG (avion, banque ⚖, impôts %, logement 🏠, assurance 🛡, transport 🚇, travail 💼, retraite ⏳, enfants 👶, aides 🎁) — réutilise/étend `BuildingSVG` ou crée des mini-icônes inline.
+- Cases cochées = remplies couleur du bâtiment + ✓.
+- Cases verrouillées = grisées + cadenas.
 
-- `Revolut` — black rounded square with white "R" mark approximation (signature angular R).
-- `N26` — minimal lowercase "n26" wordmark on lemon background.
-- `Société Générale` — red/black squared-half block (their iconic logo style).
-- Fallback: monogram chip, but only used if a bank we don't know is added later.
+## 3. Calendrier visuel échéances (`src/routes/deadlines.tsx`)
 
-Use the component everywhere the letter circle was used:
-- `BankCard` header
-- `CompareModal` selector tiles
-- Sticky compare bar avatar stack
+Garder la liste d'échéances actuelle en haut, **ajouter en bas un mini-calendrier mensuel** :
+- Grille 7×N (semaines/jours) sur le mois en cours.
+- Jours avec échéance = pastille couleur du bâtiment concerné, taille proportionnelle à l'urgence.
+- Tap sur un jour → toast/scroll vers l'échéance correspondante.
+- Navigation mois précédent / suivant via flèches.
 
-## 3. Banking level (`src/routes/level.banking.tsx`) — less text, more visuals
+## 4. Marteau de déblocage (`src/routes/city.tsx` + `src/lib/buildings.ts`)
 
-### Intro step — slim down
-- Keep hero, drop the duplicate "French banking, decoded ✨" headline (already on hero).
-- Collapse the 5 explainer cards into 3 visual tiles in a 1-column stack with iconography doing the heavy lifting:
-  1. "Two flavors" — split card visual (Traditional vs Neobank) with side-by-side icon tiles, one short line each.
-  2. "Paperwork" — 3 mini doc chips (Passport, Address, Income) on a lemon card.
-  3. "Speed" — clock illustration with "10 min vs 10 days" big-number contrast.
-- Single CTA at the bottom. Remove all generic emojis (🛂📄💼🛋️⏰💡✨🎉🎯📋🔔🏦) — keep purposeful iconography via lucide.
+Mécanique: chaque bâtiment déclare ses `requiredDocs: string[]` (mappés aux noms de documents). Si tous les docs requis sont présents dans `uploadedDocuments`, un **icône marteau 🔨 animé apparaît à droite du bâtiment** même si l'étape précédente n'est pas validée. Tap sur le marteau → marque le bâtiment comme `unlocked` (ajoute en `completedBuildings` les étapes manquantes en amont, ou nouveau flag `manuallyUnlocked`).
+- Mapping initial : Banque → "RIB français", Impôts → "Numéro fiscal (SPI)", Logement → "Justificatif de domicile", Travail → "Attestation employeur", etc.
+- Le marteau pulse en lemon pour attirer l'œil.
 
-### Recommend step
-- Use `BankLogo` instead of `{bank.name[0]}` letter circle.
-- Tighten metric tiles: switch to 3 lemon-tinted chips with monospace numbers.
-- Replace coral stars with lemon-filled stars; rating text in lemon.
-- Move "Documents needed" out of the card (collapsed) into a one-line summary chip ("3 docs needed →") that opens the bottom-sheet modal — keeps the card clean.
-- Remove "Best match" coral pill in favor of a lemon corner ribbon.
+## 5. Chemins pointillés entre tous les bâtiments (`src/routes/city.tsx`)
 
-### Apply step
-- Replace orange→navy gradient block with `card-hero` + lemon left border.
-- Remove `🎯 📋 🔔` emojis from headings.
-- Step list: keep numbered lemon dots, but collapse "what to have ready" into the same flow rather than a separate card.
+Le path de base est déjà en pointillés mais les segments complétés sont en trait plein. **Changement :** garder TOUTES les courbes en pointillés, et différencier par couleur uniquement (lemon plein-pointillé pour complété, blanc 8% pour à faire, gradient lemon→lilac animé pour la prochaine étape active).
 
-### Track step
-- Remove `🎉 ⏳ ✓ 🔔` emojis.
-- Bell row: use lucide `<Bell>` with a lemon background tile (already mostly the case), short copy.
-- Tighten down: 3 cards instead of 5 (timeline + status + next-up). Drop "Mark account as ready (demo)" copy noise — just call the button "I got my card".
+## 6. Map France régions (`src/routes/onboarding.tsx` Step3)
 
-### Success step → route back to map
-- Replace orange→navy gradient with `bg-gradient-lemon` on a black card.
-- Remove "View my dashboard first" secondary path.
-- Primary CTA "Back to your quest map →" → `navigate({ to: "/home" })`.
-- Auto-redirect to `/home` after 2.5 s if user doesn't tap (keeps confetti time visible).
-- Keep the +150 XP big-number animation.
+Remplacer le bloc "Paris, France" par une **vraie carte SVG monochrome de la France** avec les 13 régions cliquables :
+- SVG inline avec un `<path>` par région (chemins simplifiés intégrés dans le composant).
+- Région survolée/active → fill lemon, autres → bg-surface.
+- Au tap : la région choisie remplit `country_moving_to` et un sélecteur de villes correspondantes apparaît (Île-de-France → Paris, Versailles ; PACA → Marseille, Nice, etc.).
+- Sortie store : `country_moving_to` (FR) + nouveau champ `region` + champ `city`.
 
-## 4. Taxes level (`src/routes/level.taxes.tsx`)
+## 7. "Je suis là" + logo mobile (`src/routes/city.tsx`)
 
-### Intro
-- Drop emojis: 😮‍💨 ⏰ ✉️ from copy.
-- Consolidate 4 explainer cards into 3 visuals:
-  1. Calendar visual showing Jan→Dec timeline with "Declare in spring" callout.
-  2. Bracket bars (already nice — keep, lemon bars).
-  3. Other taxes — 3 chip tiles (CSG, Habitation, TVA) in one row, single sentence each.
-- Remove the "First year = paper" lemon card duplication; merge into a single line on the calendar visual.
+- À la place du bâtiment "avion" qui sert juste de point de départ, afficher une **petite tablette/panneau "Je suis là"** avec le logo Concierge et la mascotte Cléo.
+- Le logo se déplace le long du chemin : sa position absolue est calculée à partir du dernier bâtiment complété (sur le node correspondant). Animation de translation à chaque déblocage.
 
-### Plan
-- Reduce text density: single recap card + one "estimated tax" big-number card with a lemon range bar.
-- Drop the 4-line `<br/>` block, replace with 3 lemon-numbered mini steps (Paper → Form 2042 → Mail → May 31).
+## 8. Bouton "Comparer" + tableau comparatif (`src/routes/building.$id.tsx`)
 
-### Pack
-- Trim doc list from 5 to 4 items (combine payslips + IBAN under "Money proofs"). Each row: lemon icon tile + 2-word label.
-- Drop the `📄` emoji header.
-- Remove "Centre des Finances Publiques" mock map (visual noise) — replace with a single "Find your nearest tax office" lemon-outline button.
+Pour chaque bâtiment qui a des `recos`, ajouter un bouton **"Comparer"** à côté du résultat IA. Click → ouvre une `BottomSheet` avec :
+- Liste de toutes les options du `brands` + recos (~5-8 par bâtiment, on enrichit `BUILDING_CONTENT` avec un nouveau champ `comparables`).
+- Checkbox sur chaque ligne, sélection multiple.
+- Tableau scrollable horizontalement : colonnes = options sélectionnées, lignes = critères (Prix, Délai, Note, Frais, etc.).
+- Lemon highlight sur la "meilleure" valeur par ligne.
 
-### Completion
-- After `addXp(200)` and `celebrate()`, change redirect from `/level/benefits` to `/home` (back to map). Map will surface Benefits as the new "current" section.
+## 9. Impôts : étapes et prédiction (`src/routes/building.$id.tsx`)
 
-## 5. Benefits level (`src/routes/level.benefits.tsx`)
+Section dédiée quand `buildingId === "taxes"` : `TaxesPredictionSection` (nouveau dans `src/features/`).
+- Lit `payslips` du store.
+- Calcule revenu annuel net cumulé, estime brut (× 1.28), estime impôt selon barème 2024 simplifié (tranches 11k/28k/78k/168k → 0/11/30/41/45%).
+- Affiche : "Revenu estimé annuel", "Impôt estimé", "Taux moyen", "Taux marginal".
+- Liste des étapes officielles (déjà dans `guide`) + alerte si déclaration approche.
 
-### Hero & list
-- Keep money-rain hero (already on-brand).
-- Strip emojis from card data: replace `emoji` field with a `lucide` icon per benefit (`Home`, `Train`, `ShoppingBag`, `Pill`/`HeartPulse`). Render as a lemon-tinted icon tile (h-12 w-12, gradient-lemon background, black icon) — premium, not generic.
-- Remove "✓ Eligible" / "Check" emoji from pills (use icon-less pills).
-- Big callout "~€2,100/yr" — keep, drop ✨ Sparkles eyebrow row's icon clutter, keep one line of text.
+## 10. Réordonnancement Aides (`src/lib/theme.ts` + `src/lib/buildings.ts`)
 
-### Detail drawer
-- Drop `Apply on caf.fr` external link generic feel: make it a primary lemon CTA "Start application →".
-- Remove the closing italic line with the ⚡ emoji on tracking card; keep timeline only.
-- Simplify "What you'll need" — 3 chips in a row instead of stacked rows with checks.
+Modifier `buildingOrder` : `["airport", "bank", "aids", "taxes", "housing", "insurance", "transport", "work", "retirement", "children"]`. La logique de déblocage en chaîne suit ce nouvel ordre.
 
-### Quest completion
-- After tapping "Start application" on at least one eligible benefit, mark `setQuest({ benefitsClaimed: true })` and add a final success modal:
-  - Cleo celebrating, "+200 XP", "All 3 levels complete!" big number, single CTA "Back to map →" → `navigate({ to: "/home" })`.
-- Trigger `celebrate()`.
+## 11. Profil interactif (`src/routes/profile.tsx`)
 
-## 6. Quest map (`src/routes/home.tsx`) — minor
+Refonte de la BottomSheet "Modifier le profil" en **vrai formulaire UX** :
+- Champs édités : prénom, nom, date de naissance, nationalité (chips), région (lien vers map), statut emploi (toggle: Salarié·e / Freelance / Étudiant·e / **Recherche d'emploi**), tranche revenus.
+- Sauvegarde via `setOnboarding`.
+- **Si statut = "Recherche d'emploi"** : on ajoute un flag `onboarding.is_job_seeking = true` et `PayslipsSection` cesse de demander un upload pour le mois en cours (affiche "Pas d'activité ce mois — tu n'as rien à uploader" + CTA "Je travaille à nouveau").
 
-- After Benefits completes, the next-current node should highlight the Final Reward trophy (scroll-to + pulse) so returning to the map feels rewarding. Use `requestAnimationFrame` + `scrollIntoView({ behavior: "smooth", block: "center" })` when `quest.benefitsClaimed` is true and a `?from=benefits` param is present.
-- No structural changes otherwise.
+## Fichiers touchés
 
-## 7. CCard, CButton tone polish (cute & premium)
+```text
+src/lib/theme.ts                        # réordonner aides
+src/lib/buildings.ts                    # +requiredDocs, +comparables, ordre
+src/lib/store.ts                        # +region, +city, +is_job_seeking, +manuallyUnlocked
+src/routes/city.tsx                     # pointillés partout, marteau, "Je suis là", logo mobile
+src/routes/dashboard.tsx                # refonte complète graphs SVG + timeline icônes
+src/routes/deadlines.tsx                # +calendrier mensuel
+src/routes/onboarding.tsx               # Step3 = map France SVG
+src/routes/building.$id.tsx             # bouton Comparer + section TaxesPrediction
+src/routes/profile.tsx                  # form édition interactif
+src/features/TaxesPredictionSection.tsx # NEW
+src/features/ComparatorSheet.tsx        # NEW
+src/features/PayslipsSection.tsx        # respecte is_job_seeking
+src/components/FranceMap.tsx            # NEW – SVG régions
+src/components/BuildingIcon.tsx         # NEW – mini icônes pour timeline
+src/styles.css                          # éventuelles keyframes
+```
 
-- `CCard`: bump corner radius to 24 px on `tone="lemon"`, add subtle 1 px black inner stroke for tactile feel, soften shadow.
-- `CButton`:
-  - `primary`: keep lemon gradient, add subtle inset highlight (`box-shadow: inset 0 1px 0 rgba(255,255,255,0.5), 0 8px 30px rgba(248,255,161,0.3)`).
-  - `secondary`: switch to filled `bg-navy` with lemon text + lemon border (currently transparent — looks generic). Active state: lemon background flash.
-  - `white` variant retired internally — replace usages with `primary`.
+## Notes techniques
 
-## Technical notes
-
-- Files touched: `level.banking.tsx`, `level.taxes.tsx`, `level.benefits.tsx`, `home.tsx`, `CCard.tsx`, `CButton.tsx`, `styles.css` (button polish), new `BankLogo.tsx`.
-- Use `useNavigate` from `@tanstack/react-router` to route back to `/home` at level completion.
-- Persist `benefitsClaimed` in `useApp` (extend the `quest` slice with one boolean).
-- Verify with `bunx tsc --noEmit` after edits.
-- No new packages.
-
-## Out of scope
-
-- Real bank API logos as remote SVGs (we draw them inline to avoid CDN/asset failures).
-- Dashboard, Deadlines, Profile (already in spec from prior pass; not part of this user-friendliness pass).
-- Locked levels (Housing, Healthcare, etc.) keep their "Coming soon" treatment.
+- Aucune dépendance npm ajoutée (SVG inline pour map France et tous les graphs).
+- Tout reste compatible TanStack Start strict mode (pas de window.* hors `useEffect`).
+- L'état persistant Zustand reste rétrocompatible (nouveaux champs optionnels).
+- TypeScript `noEmit` vérifié à la fin.

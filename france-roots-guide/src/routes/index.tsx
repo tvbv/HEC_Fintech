@@ -1,183 +1,103 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { motion } from "framer-motion";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Cleo } from "@/components/concierge/Cleo";
-import { ParisSkyline } from "@/components/concierge/ParisSkyline";
-import { CButton } from "@/components/concierge/CButton";
-import { IconArrowRight, IconKey } from "@/components/concierge/Icons";
-import { useApp } from "@/lib/store";
+import { AmbientGlobe } from "@/components/AmbientGlobe";
+import { CleoCharacter } from "@/components/CleoCharacter";
 
 export const Route = createFileRoute("/")({
-  component: SplashScreen,
+  head: () => ({
+    meta: [
+      { title: "Concierge — Ta ville t'attend" },
+      { name: "description", content: "Ville gamifiée pour t'installer en France. Banque, impôts, logement, assurance." },
+      { property: "og:title", content: "Concierge — Ta ville t'attend" },
+      { property: "og:description", content: "Ville gamifiée pour t'installer en France." },
+    ],
+  }),
+  component: Splash,
 });
 
-function SplashScreen() {
+function Splash() {
   const navigate = useNavigate();
-  const onboarded = useApp((s) => s.onboarded);
-  const [flash, setFlash] = useState(false);
+  const [phase, setPhase] = useState(0);
+  const [letters, setLetters] = useState(0);
 
   useEffect(() => {
-    if (onboarded) navigate({ to: "/home", replace: true });
-  }, [onboarded, navigate]);
+    const t1 = setTimeout(() => setPhase(1), 600);
+    const t2 = setTimeout(() => setPhase(2), 1400);
+    const t3 = setTimeout(() => setPhase(3), 2200);
+    const t4 = setTimeout(() => setPhase(4), 3000);
+    return () => [t1, t2, t3, t4].forEach(clearTimeout);
+  }, []);
 
-  const handleStart = () => {
-    setFlash(true);
-    setTimeout(() => navigate({ to: "/onboarding" }), 220);
-  };
+  useEffect(() => {
+    if (phase < 3) return;
+    const i = setInterval(() => {
+      setLetters((x) => {
+        if (x >= 9) { clearInterval(i); return x; }
+        return x + 1;
+      });
+    }, 90);
+    return () => clearInterval(i);
+  }, [phase]);
 
-  // Floating particles
-  const particles = [...Array(8)].map((_, i) => ({
-    x: 20 + (i * 47) % 360,
-    y: 80 + (i * 71) % 380,
-    size: 3 + (i % 4),
-    color: i % 3 === 0 ? "#F8FFA1" : i % 3 === 1 ? "#A8A3F8" : "#FFFFFF",
-    delay: i * 0.3,
-  }));
+  const word = "Concierge";
+  const colorOf = (i: number) =>
+    i < 3 ? "var(--lemon)" : i < 6 ? "#fff" : "var(--lilac)";
 
   return (
-    <div className="mobile-shell relative overflow-hidden bg-black">
-      {/* Top-right lilac ambient glow */}
-      <div
-        className="absolute top-0 right-0 w-[300px] h-[300px] pointer-events-none"
-        style={{ background: "radial-gradient(circle, rgba(168,163,248,0.10) 0%, transparent 70%)" }}
-      />
+    <main className="relative min-h-screen overflow-hidden flex flex-col items-center justify-center px-6">
+      <AmbientGlobe />
 
-      {/* Paris skyline at bottom */}
-      <ParisSkyline height="42%" animate />
+      {/* halos */}
+      <div className="absolute top-1/4 -left-20 w-72 h-72 rounded-full" style={{ background: "var(--lemon)", filter: "blur(120px)", opacity: 0.18 }} />
+      <div className="absolute bottom-1/4 -right-20 w-72 h-72 rounded-full" style={{ background: "var(--lilac)", filter: "blur(120px)", opacity: 0.22 }} />
 
-      {/* Floating particles */}
-      {particles.map((p, i) => (
-        <motion.span
-          key={i}
-          className="absolute rounded-full pointer-events-none"
-          style={{
-            left: p.x,
-            top: p.y,
-            width: p.size,
-            height: p.size,
-            backgroundColor: p.color,
-            opacity: 0.4,
-          }}
-          animate={{
-            y: [0, -30, 0],
-            opacity: [0.2, 0.5, 0.2],
-          }}
-          transition={{
-            duration: 4 + (i % 3),
-            repeat: Infinity,
-            delay: 2.2 + p.delay,
-            ease: "easeInOut",
-          }}
-        />
-      ))}
-
-      <div className="relative z-10 flex flex-col items-center min-h-[100dvh] px-6">
-        {/* Cleo drops in at 38% from top */}
-        <div className="flex-1 flex flex-col items-center justify-center w-full pt-20">
-          <motion.div
-            initial={{ y: -300, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ type: "spring", stiffness: 130, damping: 12, delay: 0.9 }}
-            className="relative"
-          >
-            <motion.div
-              animate={{ scale: [1, 1.15, 0.9, 1] }}
-              transition={{ duration: 0.4, delay: 1.5, times: [0, 0.3, 0.6, 1] }}
-            >
-              <Cleo pose="idle" mood="happy" size={120} />
-            </motion.div>
-
-            {/* Star burst from Cleo's key */}
-            {[...Array(8)].map((_, i) => {
-              const angle = (i / 8) * Math.PI * 2;
-              return (
-                <motion.span
-                  key={i}
-                  className="absolute top-1/2 left-1/2 w-2 h-2 rounded-full bg-lemon"
-                  initial={{ x: 0, y: 0, opacity: 0, scale: 0 }}
-                  animate={{
-                    x: Math.cos(angle) * 70,
-                    y: Math.sin(angle) * 70,
-                    opacity: [0, 1, 0],
-                    scale: [0, 1.4, 0],
-                  }}
-                  transition={{ duration: 0.6, delay: 1.4 + i * 0.02 }}
-                />
-              );
-            })}
-          </motion.div>
-
-          {/* Wordmark */}
-          <div className="mt-10 flex items-center gap-3">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.5 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 1.7, type: "spring" }}
-              className="relative"
-            >
-              <div
-                className="absolute inset-0 rounded-full"
-                style={{ background: "radial-gradient(circle, rgba(248,255,161,0.6) 0%, transparent 70%)", transform: "scale(1.8)" }}
-              />
-              <IconKey size={32} className="text-lemon relative" />
-            </motion.div>
-            <h1 className="font-display font-black text-white text-[44px] tracking-[-2px] leading-none flex">
-              {"Concierge".split("").map((char, i) => (
-                <motion.span
-                  key={i}
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 1.4 + i * 0.04, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                >
-                  {char}
-                </motion.span>
-              ))}
-            </h1>
-          </div>
-
-          {/* Tagline */}
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: [0.6, 1, 0.6] }}
-            transition={{ delay: 1.8, opacity: { duration: 2, repeat: Infinity, delay: 2 } }}
-            className="mt-4 text-lemon text-[16px] font-body font-normal text-center"
-          >
-            Your guide to life in France
-          </motion.p>
-        </div>
-
-        {/* Bottom CTA */}
-        <motion.div
-          initial={{ y: 60, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 2.6, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-          className="w-full max-w-sm pb-10 z-10"
-          style={{ paddingBottom: "max(40px, env(safe-area-inset-bottom))" }}
-        >
-          <CButton onClick={handleStart} variant="primary">
-            Start my journey
-            <IconArrowRight size={18} />
-          </CButton>
-          <motion.button
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 2.8 }}
-            className="w-full mt-3 text-white-40 text-[14px] font-body py-2"
-          >
-            Already have an account? <span className="text-lemon">Sign in</span>
-          </motion.button>
-        </motion.div>
+      {/* Paris silhouette montant du bas */}
+      <div className="absolute bottom-0 inset-x-0 h-40 z-10 transition-transform duration-1000" style={{ transform: phase >= 1 ? "translateY(0)" : "translateY(100%)"}}>
+        <svg viewBox="0 0 400 160" preserveAspectRatio="none" className="w-full h-full">
+          <path d="M0 160 L0 100 L20 100 L25 80 L40 80 L40 60 L60 60 L65 50 L70 60 L90 60 L90 100 L120 100 L120 70 L140 70 L150 30 L160 70 L180 70 L180 110 L210 110 L210 80 L230 80 L230 60 L250 60 L250 100 L280 100 L280 70 L300 70 L305 50 L310 70 L330 70 L330 110 L360 110 L360 90 L380 90 L380 100 L400 100 L400 160 Z" fill="rgba(168,163,248,0.25)" />
+        </svg>
       </div>
 
-      {/* Lemon flash on tap */}
-      {flash && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: [0, 0.2, 0] }}
-          transition={{ duration: 0.18 }}
-          className="fixed inset-0 bg-lemon z-50 pointer-events-none"
-        />
-      )}
-    </div>
+      <div className="relative z-20 flex flex-col items-center gap-8">
+        {/* Cleo qui tombe */}
+        <div className={`transition-all duration-700 ${phase >= 2 ? "translate-y-0 opacity-100" : "-translate-y-32 opacity-0"}`}>
+          <CleoCharacter state="IDLE" size={84} />
+        </div>
+
+        {/* Wordmark */}
+        {phase >= 3 && (
+          <div className="flex">
+            {word.split("").map((l, i) => (
+              <span
+                key={i}
+                className="font-display font-black text-5xl sm:text-6xl"
+                style={{
+                  color: colorOf(i),
+                  opacity: i < letters ? 1 : 0,
+                  transform: i < letters ? "translateY(0)" : "translateY(20px)",
+                  transition: "all 0.3s cubic-bezier(0.34,1.56,0.64,1)",
+                }}
+              >
+                {l}
+              </span>
+            ))}
+          </div>
+        )}
+
+        <p className={`text-white/60 text-center font-body italic max-w-xs transition-opacity duration-700 ${phase >= 4 ? "opacity-100" : "opacity-0"}`}>
+          Ta ville sur-mesure pour t'installer en France.
+        </p>
+
+        {phase >= 4 && (
+          <button
+            onClick={() => navigate({ to: "/onboarding" })}
+            className="animate-pulse-glow font-label font-semibold px-8 py-4 rounded-2xl text-base"
+            style={{ background: "var(--lemon)", color: "#000" }}
+          >
+            Commencer →
+          </button>
+        )}
+      </div>
+    </main>
   );
 }

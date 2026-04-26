@@ -1,265 +1,212 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { AnimatePresence, motion } from "framer-motion";
 import { useState } from "react";
-import { CButton } from "@/components/concierge/CButton";
-import { Cleo, CleoBubble } from "@/components/concierge/Cleo";
-import { Flag, type CountryCode } from "@/components/concierge/Flags";
-import { submitIntake, type IntakeRequest } from "@/lib/api";
-import {
-  IconArrowLeft, IconArrowRight, IconCheck, IconLock, IconSearch,
-  IconBank, IconDocumentCheck, IconCalculator, IconGift,
-  IconGraduationCap, IconBriefcase, IconLightning, IconSearch as IconSearch2,
-  IconCircles, IconMapPin, IconCard, IconPhone, IconHome, IconShield,
-  IconHeartPulse, IconStamp, IconReceipt, IconPerson,
-  IconChevronDown,
-} from "@/components/concierge/Icons";
 import { useApp } from "@/lib/store";
+import { AmbientGlobe } from "@/components/AmbientGlobe";
+import { CleoCharacter } from "@/components/CleoCharacter";
+import { UploadIcon, CheckIcon, ChevronIcon } from "@/components/icons";
+
 
 export const Route = createFileRoute("/onboarding")({
+  head: () => ({
+    meta: [
+      { title: "Onboarding — Concierge" },
+      { name: "description", content: "Personnalise ton parcours d'installation en France." },
+    ],
+  }),
   component: Onboarding,
 });
 
-const TOTAL = 8;
+const STEPS = 9; // 8 questions + upload
+
+const NATIONALITIES = [
+  { code: "FR", flag: "🇫🇷", name: "France" },
+  { code: "UA", flag: "🇺🇦", name: "Ukraine" },
+  { code: "US", flag: "🇺🇸", name: "USA" },
+  { code: "GB", flag: "🇬🇧", name: "Royaume-Uni" },
+  { code: "DE", flag: "🇩🇪", name: "Allemagne" },
+  { code: "ES", flag: "🇪🇸", name: "Espagne" },
+  { code: "IT", flag: "🇮🇹", name: "Italie" },
+  { code: "PT", flag: "🇵🇹", name: "Portugal" },
+  { code: "MA", flag: "🇲🇦", name: "Maroc" },
+  { code: "DZ", flag: "🇩🇿", name: "Algérie" },
+];
+
+const EMPLOYMENT = [
+  { id: "student", label: "Étudiant·e" },
+  { id: "salaried", label: "Salarié·e" },
+  { id: "freelance", label: "Freelance" },
+  { id: "searching", label: "Recherche d'emploi" },
+];
+
+const INCOME_BRACKETS = ["<1500", "1500-2000", "2000-3000", "3000-5000", "5000+"];
+const TIMES = [
+  { id: "less_3m", label: "< 3 mois" },
+  { id: "4_months", label: "3-12 mois" },
+  { id: "1_3_years", label: "1-3 ans" },
+  { id: "3_plus", label: "3+ ans" },
+];
+
+const DOCS = [
+  "Carte d'identité", "Passeport", "Visa", "Titre de séjour",
+  "Justificatif de domicile", "RIB français", "Numéro fiscal", "Attestation employeur",
+];
+
+const GOALS = [
+  "Ouvrir un compte bancaire", "Trouver un logement", "Comprendre les impôts",
+  "Souscrire une assurance", "Obtenir un Navigo", "Trouver un emploi", "Inscrire mes enfants",
+];
 
 function Onboarding() {
-  const [step, setStep] = useState(1);
-  const [dir, setDir] = useState(1);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
-  const { onboarding, setOnboarding, toggleDocument, completeOnboarding, setProfileId } = useApp();
+  const { onboarding, setOnboarding, addDocument, completeOnboarding } = useApp();
+  const [step, setStep] = useState(0);
 
-  const next = async () => {
-    if (step < TOTAL) {
-      setDir(1);
-      setStep(step + 1);
-    } else {
-      // Convert frontend data to backend IntakeRequest format
-      const intakeData: IntakeRequest = {
-        country_of_residence: onboarding.toCountry,
-        country_moving_to: onboarding.toCountry,
-        first_name: onboarding.name.split(' ')[0] || 'User',
-        last_name: onboarding.name.split(' ').slice(1).join(' ') || '',
-        date_of_birth: '1990-01-01',
-        nationality: onboarding.fromCountry,
-        employment_status: onboarding.status,
-        has_income: true,
-        income_bracket: 'mid',
-        currency: 'EUR',
-        goals: onboarding.goals,
-      };
-
-      try {
-        setIsSubmitting(true);
-        const result = await submitIntake(intakeData);
-        setProfileId(result.profile_id);
-        completeOnboarding();
-        navigate({ to: "/loading" });
-      } catch (error) {
-        console.error('Failed to submit intake:', error);
-        alert('Failed to save your profile. Please try again.');
-      } finally {
-        setIsSubmitting(false);
-      }
+  const next = () => {
+    if (step < STEPS - 1) setStep(step + 1);
+    else {
+      completeOnboarding();
+      navigate({ to: "/generating" });
     }
   };
-  const back = () => {
-    if (step > 1) { setDir(-1); setStep(step - 1); }
-    else navigate({ to: "/" });
-  };
+
+  const prev = () => step > 0 && setStep(step - 1);
 
   const canContinue = (() => {
     switch (step) {
-      case 1: return onboarding.name.trim().length > 0;
-      case 2: return !!onboarding.fromCountry;
-      case 3: return true;
-      case 4: return onboarding.goals.length > 0;
-      case 5: return !!onboarding.status;
-      case 6: return !!onboarding.timeInFrance;
-      case 7: return onboarding.hasHomeTies !== null;
+      case 0: return !!onboarding.first_name && !!onboarding.last_name;
+      case 1: return !!onboarding.date_of_birth;
+      case 2: return !!onboarding.nationality;
+      case 3: return !!onboarding.country_moving_to;
+      case 4: return !!onboarding.employment_status;
+      case 5: return onboarding.has_income !== undefined;
+      case 6: return !!onboarding.time_in_france;
+      case 7: return (onboarding.goals?.length ?? 0) > 0;
       case 8: return true;
       default: return false;
     }
   })();
 
   return (
-    <div className="mobile-shell relative overflow-hidden bg-black pb-24">
-      {/* Top-right lemon ambient */}
-      <div
-        className="absolute top-0 right-0 w-[300px] h-[250px] pointer-events-none"
-        style={{ background: "radial-gradient(circle, rgba(248,255,161,0.06) 0%, transparent 70%)" }}
-      />
+    <main className="relative min-h-screen pb-32">
+      <AmbientGlobe />
+      <div className="relative z-10 max-w-md mx-auto px-5 pt-6">
+        {/* progress pills */}
+        <div className="flex gap-1.5 mb-8">
+          {Array.from({ length: STEPS }).map((_, i) => (
+            <div
+              key={i}
+              className="h-1.5 flex-1 rounded-full transition-colors"
+              style={{
+                background: i < step ? "var(--lemon)" : i === step ? "#fff" : "var(--bg-elevated)",
+              }}
+            />
+          ))}
+        </div>
 
-      {/* Top bar */}
-      <div className="sticky top-0 z-30 px-5 pb-3 glass-dark" style={{ paddingTop: "max(14px, env(safe-area-inset-top))" }}>
-        <div className="flex items-center gap-3 h-11">
+        <div key={step} className="animate-fade-in">
+          {step === 0 && <Step0 data={onboarding} set={setOnboarding} />}
+          {step === 1 && <Step1 data={onboarding} set={setOnboarding} />}
+          {step === 2 && <Step2 data={onboarding} set={setOnboarding} />}
+          {step === 3 && <Step3 data={onboarding} set={setOnboarding} />}
+          {step === 4 && <Step4 data={onboarding} set={setOnboarding} />}
+          {step === 5 && <Step5 data={onboarding} set={setOnboarding} />}
+          {step === 6 && <Step6 data={onboarding} set={setOnboarding} />}
+          {step === 7 && <Step7 data={onboarding} set={setOnboarding} />}
+          {step === 8 && <Step8 onUpload={(name) => addDocument({ name, type: "official" })} />}
+        </div>
+      </div>
+
+      {/* footer CTA */}
+      <div className="fixed bottom-0 inset-x-0 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A] to-transparent pt-8 pb-6 px-5 z-20">
+        <div className="max-w-md mx-auto flex gap-3">
+          {step > 0 && (
+            <button onClick={prev} className="px-5 py-3.5 rounded-2xl bg-[#1C1C1E] text-white font-label">
+              ←
+            </button>
+          )}
           <button
-            onClick={back}
-            className="h-10 w-10 -ml-1 rounded-full flex items-center justify-center bg-white-10 text-white active:scale-95"
+            onClick={next}
+            disabled={!canContinue}
+            className="flex-1 py-3.5 rounded-2xl font-label font-semibold transition-opacity"
+            style={{
+              background: "var(--lemon)",
+              color: "#000",
+              opacity: canContinue ? 1 : 0.35,
+            }}
           >
-            <IconArrowLeft size={20} />
+            {step === STEPS - 1 ? "Terminer" : "Continuer →"}
           </button>
-          <div className="flex-1 flex items-center justify-center gap-1.5">
-            {Array.from({ length: TOTAL }).map((_, i) => {
-              const done = i < step - 1;
-              const active = i === step - 1;
-              return (
-                <span
-                  key={i}
-                  className={`h-1.5 rounded-full transition-all ${
-                    active ? "w-7 bg-lemon" : done ? "w-2 bg-lemon/60" : "w-2 bg-navy"
-                  }`}
-                />
-              );
-            })}
-          </div>
-          <span className="min-w-[60px] text-right text-white-40 text-[12px] font-ui">
-            Step {step} of {TOTAL}
-          </span>
+          {step === 8 && (
+            <button onClick={next} className="px-4 py-3.5 rounded-2xl bg-[#1C1C1E] text-white/60 text-sm font-label">
+              Skip
+            </button>
+          )}
         </div>
       </div>
-
-      <div className="px-5 pt-4 relative z-10">
-        <AnimatePresence mode="wait" custom={dir}>
-          <motion.div
-            key={step}
-            custom={dir}
-            initial={{ opacity: 0, x: dir * 30 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -dir * 30 }}
-            transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-          >
-            {step === 1 && <Step1Name value={onboarding.name} onChange={(v) => setOnboarding({ name: v })} />}
-            {step === 2 && (
-              <Step2Origin
-                value={onboarding.fromCountry}
-                onSelect={(country, code) => setOnboarding({ fromCountry: country, fromCountryFlag: code })}
-              />
-            )}
-            {step === 3 && <Step3Destination />}
-            {step === 4 && (
-              <Step4Goals
-                selected={onboarding.goals}
-                onToggle={(k) => {
-                  const has = onboarding.goals.includes(k);
-                  setOnboarding({ goals: has ? onboarding.goals.filter((g) => g !== k) : [...onboarding.goals, k] });
-                }}
-              />
-            )}
-            {step === 5 && (
-              <Step5Status value={onboarding.status} onSelect={(v) => setOnboarding({ status: v })} />
-            )}
-            {step === 6 && (
-              <Step6Time value={onboarding.timeInFrance} onSelect={(v) => setOnboarding({ timeInFrance: v })} />
-            )}
-            {step === 7 && (
-              <Step7HomeTies value={onboarding.hasHomeTies} onSelect={(v) => setOnboarding({ hasHomeTies: v })} />
-            )}
-            {step === 8 && <Step8Documents docs={onboarding.documents} onToggle={toggleDocument} />}
-          </motion.div>
-        </AnimatePresence>
-      </div>
-
-      {/* Cleo fixed bottom-left */}
-      <div className="fixed bottom-[110px] left-4 z-40 pointer-events-none" style={{ left: "max(16px, calc((100vw - 430px) / 2 + 16px))" }}>
-        <div className="opacity-90">
-          <Cleo pose="idle" mood="happy" size={48} />
-        </div>
-      </div>
-
-      {/* Continue CTA fixed bottom */}
-      <div
-        className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] px-5 pt-3 pb-5 glass-dark border-t border-lemon/10 z-30"
-        style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom))" }}
-      >
-        <CButton onClick={next} disabled={!canContinue || isSubmitting} variant="primary">
-          {isSubmitting ? "Saving..." : step === TOTAL ? "Build my Concierge path" : "Continue"}
-          {!isSubmitting && <IconArrowRight size={18} />}
-        </CButton>
-      </div>
-    </div>
+    </main>
   );
 }
 
-/* ---------------- Steps ---------------- */
-
-function StepHeader({
-  bubble, h1, sub,
-}: { bubble: string; h1: string; sub?: string }) {
+function Heading({ a, b, c, ca, cb, cc }: { a: string; b: string; c?: string; ca: string; cb: string; cc?: string }) {
   return (
-    <div className="mb-5">
-      <CleoBubble side="left" pose="talking" mood="happy" size={56} text={bubble} className="mb-4" />
-      <h1 className="font-display font-extrabold text-white text-[28px] leading-[1.05] tracking-[-0.8px]">
-        {h1}
-      </h1>
-      {sub && <p className="mt-2 text-white-60 text-[14px] font-body">{sub}</p>}
-    </div>
+    <h1 className="font-display font-black text-4xl leading-tight mb-6">
+      <span style={{ color: ca }}>{a}</span>{" "}
+      <span style={{ color: cb }}>{b}</span>
+      {c && <> <span style={{ color: cc }}>{c}</span></>}
+    </h1>
   );
 }
 
-function Step1Name({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+const inputCls = "w-full bg-[#1C1C1E] border-b-2 border-white/10 px-4 py-3.5 rounded-t-xl text-white font-body italic placeholder:text-white/30 outline-none focus:border-[var(--lemon)] transition-colors";
+
+function Step0({ data, set }: any) {
   return (
     <>
-      <StepHeader
-        bubble="Hey! What should I call you?"
-        h1="What's your name?"
-        sub="Let's make this personal."
-      />
-      <div className="relative">
-        <input
-          autoFocus
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder="Your name..."
-          className="w-full h-14 px-5 rounded-[14px] bg-navy text-white text-[18px] font-body placeholder:text-white-30 outline-none border-b-2 border-transparent focus:border-lemon transition-colors"
-        />
+      <Heading a="On" b="commence par" c="ton prénom ?" ca="var(--lemon)" cb="#fff" cc="var(--lilac)" />
+      <CleoCharacter state="TALKING" message="Ravi de te rencontrer !" size={56} />
+      <div className="mt-6 space-y-3">
+        <input className={inputCls} placeholder="Prénom" value={data.first_name ?? ""} onChange={(e) => set({ first_name: e.target.value })} />
+        <input className={inputCls} placeholder="Nom" value={data.last_name ?? ""} onChange={(e) => set({ last_name: e.target.value })} />
       </div>
     </>
   );
 }
 
-const COUNTRIES: { name: string; code: CountryCode }[] = [
-  { name: "Ukraine", code: "UA" },
-  { name: "Morocco", code: "MA" },
-  { name: "India", code: "IN" },
-  { name: "Spain", code: "ES" },
-  { name: "USA", code: "US" },
-  { name: "United Kingdom", code: "GB" },
-  { name: "Brazil", code: "BR" },
-  { name: "Germany", code: "DE" },
-];
-
-function Step2Origin({ value, onSelect }: { value: string; onSelect: (n: string, c: string) => void }) {
-  const [q, setQ] = useState("");
-  const filtered = COUNTRIES.filter((c) => c.name.toLowerCase().includes(q.toLowerCase()));
+function Step1({ data, set }: any) {
   return (
     <>
-      <StepHeader bubble="So, where's home? I need to know everything." h1="Where are you from?" />
-      <div className="relative mb-4">
-        <IconSearch size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-lemon" />
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Search countries..."
-          className="w-full h-12 pl-12 pr-4 rounded-[14px] bg-navy text-white text-[14px] placeholder:text-white-40 outline-none font-body"
-        />
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        {filtered.map((c) => {
-          const active = value === c.name;
+      <Heading a="Quand" b="es-tu né·e" c="?" ca="#fff" cb="var(--lemon)" cc="var(--lilac)" />
+      <p className="text-white/50 italic mb-6">Pour calculer tes droits & ta retraite.</p>
+      <input
+        type="date"
+        className={inputCls}
+        value={data.date_of_birth ?? ""}
+        onChange={(e) => set({ date_of_birth: e.target.value })}
+      />
+    </>
+  );
+}
+
+function Step2({ data, set }: any) {
+  return (
+    <>
+      <Heading a="D'où" b="viens-tu" c="?" ca="var(--lilac)" cb="#fff" cc="var(--lemon)" />
+      <p className="text-white/50 italic mb-4 text-sm">Choisis ton pays d'origine.</p>
+      <div className="grid grid-cols-2 gap-3 mt-2">
+        {NATIONALITIES.map((n) => {
+          const active = data.nationality === n.code;
           return (
             <button
-              key={c.code}
-              onClick={() => onSelect(c.name, c.code)}
-              className={`flex items-center gap-2.5 p-3.5 rounded-[16px] border transition-all active:scale-[0.97] ${
-                active
-                  ? "bg-gradient-lemon border-black/20 shadow-lemon scale-[1.02]"
-                  : "bg-navy border-white-10"
-              }`}
+              key={n.code}
+              onClick={() => set({ nationality: n.code })}
+              className="rounded-2xl p-4 text-left transition-all"
+              style={{
+                background: active ? "var(--lemon)" : "var(--bg-surface)",
+                color: active ? "#000" : "#fff",
+              }}
             >
-              <Flag code={c.code} size={32} />
-              <span className={`text-[14px] font-bold font-body text-left ${active ? "text-black" : "text-white"}`}>
-                {c.name}
-              </span>
+              <div className="text-2xl mb-1">{n.flag}</div>
+              <div className="text-sm font-label font-medium">{n.name}</div>
             </button>
           );
         })}
@@ -268,250 +215,273 @@ function Step2Origin({ value, onSelect }: { value: string; onSelect: (n: string,
   );
 }
 
-function Step3Destination() {
+const COUNTRIES = [
+  { code: "FR", flag: "🇫🇷", name: "France" },
+  { code: "BE", flag: "🇧🇪", name: "Belgique" },
+  { code: "CH", flag: "🇨🇭", name: "Suisse" },
+  { code: "CA", flag: "🇨🇦", name: "Canada" },
+  { code: "LU", flag: "🇱🇺", name: "Luxembourg" },
+  { code: "DE", flag: "🇩🇪", name: "Allemagne" },
+  { code: "ES", flag: "🇪🇸", name: "Espagne" },
+  { code: "PT", flag: "🇵🇹", name: "Portugal" },
+  { code: "IT", flag: "🇮🇹", name: "Italie" },
+  { code: "GB", flag: "🇬🇧", name: "Royaume-Uni" },
+  { code: "US", flag: "🇺🇸", name: "USA" },
+  { code: "MA", flag: "🇲🇦", name: "Maroc" },
+];
+
+function Step3({ data, set }: any) {
   return (
     <>
-      <StepHeader bubble="France! Excellent choice. Croissants included." h1="And you're heading to..." />
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.1 }}
-        className="relative bg-gradient-lemon rounded-[24px] p-6 shadow-lemon-lg border border-black/15"
-      >
-        <div className="flex items-start justify-between">
-          <div>
-            <h2 className="font-display font-black text-black text-[34px] leading-none tracking-[-1px]">France</h2>
-            <p className="mt-2 text-black/60 text-[13px] font-body font-semibold">
-              Paris · Lyon · Marseille · everywhere
-            </p>
-          </div>
-          <Flag code="FR" size={56} />
-        </div>
-        <div className="mt-5 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black text-lemon text-[11px] font-ui font-bold uppercase tracking-[1.5px]">
-          <IconCheck size={12} /> Selected
-        </div>
-      </motion.div>
+      <Heading a="Où poses-tu" b="tes valises" c="?" ca="#fff" cb="var(--lemon)" cc="var(--lilac)" />
+      <p className="text-white/50 italic mb-4 text-sm">Choisis ton pays de destination.</p>
+      <div className="grid grid-cols-3 gap-2">
+        {COUNTRIES.map((c) => {
+          const active = data.country_moving_to === c.code;
+          return (
+            <button
+              key={c.code}
+              onClick={() => set({ country_moving_to: c.code, region: null, city: "" })}
+              className="rounded-2xl p-3 text-center transition-all"
+              style={{
+                background: active ? "var(--lemon)" : "var(--bg-surface)",
+                color: active ? "#000" : "#fff",
+                border: active ? "2px solid var(--lemon)" : "2px solid transparent",
+              }}
+            >
+              <div className="text-3xl mb-1">{c.flag}</div>
+              <div className="text-xs font-label font-medium">{c.name}</div>
+            </button>
+          );
+        })}
+      </div>
+    </>
+  );
+}
 
-      <p className="mt-6 mb-3 text-white-40 text-[11px] font-ui font-bold uppercase tracking-[1.5px]">
-        Coming soon
-      </p>
-      <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-5 px-5">
-        {(["DE", "NL", "BE"] as CountryCode[]).map((code) => (
-          <div key={code} className="shrink-0 w-32 p-3 rounded-[14px] bg-navy border border-white-10 opacity-60">
-            <div className="flex items-center justify-between mb-2">
-              <Flag code={code} size={28} />
-              <IconLock size={14} className="text-white-40" />
-            </div>
-            <p className="text-white text-[12px] font-bold font-body">
-              {code === "DE" ? "Germany" : code === "NL" ? "Netherlands" : "Belgium"}
-            </p>
+function Step4({ data, set }: any) {
+  return (
+    <>
+      <Heading a="Tu fais" b="quoi" c="dans la vie ?" ca="var(--lemon)" cb="#fff" cc="var(--vivid-green)" />
+      <div className="space-y-3 mt-4">
+        {EMPLOYMENT.map((e) => {
+          const active = data.employment_status === e.id;
+          return (
+            <button
+              key={e.id}
+              onClick={() => set({ employment_status: e.id })}
+              className="w-full rounded-2xl p-5 text-left flex items-center justify-between transition-all"
+              style={{
+                background: active ? "var(--lemon)" : "var(--bg-surface)",
+                color: active ? "#000" : "#fff",
+              }}
+            >
+              <span className="font-label font-medium text-base">{e.label}</span>
+              {active && <CheckIcon size={20} />}
+            </button>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
+function Step5({ data, set }: any) {
+  return (
+    <>
+      <Heading a="Tu as déjà" b="des revenus" c="?" ca="#fff" cb="var(--vivid-green)" cc="var(--lemon)" />
+      <div className="flex gap-3 mb-6">
+        {[true, false].map((v) => (
+          <button
+            key={String(v)}
+            onClick={() => set({ has_income: v })}
+            className="flex-1 py-4 rounded-2xl font-label font-semibold"
+            style={{
+              background: data.has_income === v ? "var(--lemon)" : "var(--bg-surface)",
+              color: data.has_income === v ? "#000" : "#fff",
+            }}
+          >
+            {v ? "Oui 💸" : "Pas encore"}
+          </button>
+        ))}
+      </div>
+      {data.has_income && (
+        <div className="animate-fade-in">
+          <p className="text-white/60 italic text-sm mb-3">Combien par mois (€) ?</p>
+          <div className="flex flex-wrap gap-2 mb-4">
+            {INCOME_BRACKETS.map((b) => (
+              <button
+                key={b}
+                onClick={() => set({ income_bracket: b })}
+                className="px-4 py-2.5 rounded-full text-sm font-label font-medium"
+                style={{
+                  background: data.income_bracket === b ? "var(--lilac)" : "var(--bg-surface)",
+                  color: data.income_bracket === b ? "#000" : "#fff",
+                }}
+              >
+                {b} €
+              </button>
+            ))}
           </div>
+          <select
+            className={inputCls}
+            value={data.currency ?? "EUR"}
+            onChange={(e) => set({ currency: e.target.value })}
+          >
+            <option value="EUR">EUR €</option>
+            <option value="USD">USD $</option>
+            <option value="GBP">GBP £</option>
+          </select>
+        </div>
+      )}
+    </>
+  );
+}
+
+function Step6({ data, set }: any) {
+  return (
+    <>
+      <Heading a="Depuis" b="quand" c="es-tu là ?" ca="var(--lilac)" cb="var(--lemon)" cc="#fff" />
+      <div className="grid grid-cols-2 gap-3 mb-6">
+        {TIMES.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => set({ time_in_france: t.id })}
+            className="rounded-2xl p-4 font-label font-medium"
+            style={{
+              background: data.time_in_france === t.id ? "var(--lemon)" : "var(--bg-surface)",
+              color: data.time_in_france === t.id ? "#000" : "#fff",
+            }}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+      <p className="text-white/60 italic text-sm mb-3">Tu as gardé des comptes ou biens à l'étranger ?</p>
+      <div className="flex gap-3">
+        {[true, false].map((v) => (
+          <button
+            key={String(v)}
+            onClick={() => set({ has_financial_ties_abroad: v })}
+            className="flex-1 py-3.5 rounded-2xl font-label font-medium"
+            style={{
+              background: data.has_financial_ties_abroad === v ? "var(--lilac)" : "var(--bg-surface)",
+              color: data.has_financial_ties_abroad === v ? "#000" : "#fff",
+            }}
+          >
+            {v ? "Oui" : "Non"}
+          </button>
         ))}
       </div>
     </>
   );
 }
 
-const GOALS = [
-  { key: "banking", title: "Banking & Finance", sub: "Accounts, cards, transfers", Icon: IconBank },
-  { key: "admin", title: "Admin Setup", sub: "Residence, social security", Icon: IconDocumentCheck },
-  { key: "taxes", title: "Taxes", sub: "Understand and file correctly", Icon: IconCalculator },
-  { key: "benefits", title: "Perks & Benefits", sub: "Money France owes you", Icon: IconGift },
-];
-
-function Step4Goals({ selected, onToggle }: { selected: string[]; onToggle: (k: string) => void }) {
+function Step7({ data, set }: any) {
+  const goals = data.goals ?? [];
+  const already = data.already_has ?? [];
+  const toggle = (key: string, list: string[]) =>
+    list.includes(key) ? list.filter((x) => x !== key) : [...list, key];
   return (
     <>
-      <StepHeader bubble="What do you need most? Pick everything — I've seen it all." h1="What do you need help with?" />
-      <div className="grid grid-cols-2 gap-3">
-        {GOALS.map((g) => {
-          const active = selected.includes(g.key);
-          return (
-            <button
-              key={g.key}
-              onClick={() => onToggle(g.key)}
-              className={`relative p-4 rounded-[20px] border text-left transition-all active:scale-[0.97] h-[110px] ${
-                active ? "bg-gradient-lemon border-black/20 shadow-lemon" : "bg-navy border-white-10"
-              }`}
-            >
-              {active && (
-                <span className="absolute top-2 right-2 h-5 w-5 rounded-full bg-black flex items-center justify-center">
-                  <IconCheck size={12} className="text-lemon" />
-                </span>
-              )}
-              <g.Icon size={26} className={active ? "text-black" : "text-white"} />
-              <p className={`mt-2 text-[13px] font-bold font-display ${active ? "text-black" : "text-white"}`}>
-                {g.title}
-              </p>
-              <p className={`text-[11px] font-body mt-0.5 ${active ? "text-black/60" : "text-white-40"}`}>
-                {g.sub}
-              </p>
-            </button>
-          );
-        })}
-      </div>
-    </>
-  );
-}
-
-const STATUSES = [
-  { key: "student", label: "Student", Icon: IconGraduationCap },
-  { key: "salaried", label: "Salaried employee", Icon: IconBriefcase },
-  { key: "freelance", label: "Freelance", Icon: IconLightning },
-  { key: "jobseeker", label: "Job-seeking", Icon: IconSearch2 },
-];
-
-function Step5Status({ value, onSelect }: { value: string; onSelect: (v: string) => void }) {
-  return (
-    <>
-      <StepHeader bubble="And what's your situation? This changes everything." h1="Your status in France?" />
-      <div className="space-y-2.5">
-        {STATUSES.map((s) => {
-          const active = value === s.key;
-          return (
-            <button
-              key={s.key}
-              onClick={() => onSelect(s.key)}
-              className={`w-full h-[64px] px-5 flex items-center gap-3 rounded-[16px] border transition-all active:scale-[0.98] ${
-                active ? "bg-gradient-lemon border-black/20 shadow-lemon" : "bg-navy border-white-10"
-              }`}
-            >
-              <s.Icon size={22} className={active ? "text-black" : "text-lemon"} />
-              <span className={`text-[15px] font-bold font-display ${active ? "text-black" : "text-white"}`}>
-                {s.label}
-              </span>
-              {active && <IconCheck size={18} className="text-black ml-auto" />}
-            </button>
-          );
-        })}
-      </div>
-    </>
-  );
-}
-
-const TIMES = [
-  { key: "0-3", title: "I just arrived", sub: "under 3 months" },
-  { key: "3-12", title: "Getting my bearings", sub: "3–12 months" },
-  { key: "12+", title: "I'm practically local", sub: "over a year" },
-];
-
-function Step6Time({ value, onSelect }: { value: string; onSelect: (v: string) => void }) {
-  return (
-    <>
-      <StepHeader bubble="How long navigating this beautiful chaos?" h1="How long in France?" />
-      <div className="space-y-3">
-        {TIMES.map((t) => {
-          const active = value === t.key;
-          return (
-            <button
-              key={t.key}
-              onClick={() => onSelect(t.key)}
-              className={`w-full h-[72px] px-5 flex flex-col justify-center rounded-[18px] border transition-all active:scale-[0.98] text-left ${
-                active ? "bg-gradient-lemon border-black/20 shadow-lemon" : "bg-navy border-white-10"
-              }`}
-            >
-              <p className={`text-[15px] font-bold font-display ${active ? "text-black" : "text-white"}`}>{t.title}</p>
-              <p className={`text-[12px] font-body ${active ? "text-black/60" : "text-white-40"}`}>{t.sub}</p>
-            </button>
-          );
-        })}
-      </div>
-    </>
-  );
-}
-
-function Step7HomeTies({ value, onSelect }: { value: boolean | null; onSelect: (v: boolean) => void }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <StepHeader bubble="Still got money stuff back home? Tell me — I keep secrets. (Mostly.)" h1="Financial ties back home?" />
-      <div className="grid grid-cols-2 gap-3">
-        <button
-          onClick={() => onSelect(true)}
-          className={`p-5 rounded-[20px] border min-h-[140px] text-left transition-all active:scale-[0.97] ${
-            value === true ? "bg-gradient-lemon border-black/20 shadow-lemon" : "bg-navy border-white-10"
-          }`}
-        >
-          <IconCircles size={30} className={value === true ? "text-black" : "text-lemon"} />
-          <p className={`mt-3 text-[15px] font-bold font-display ${value === true ? "text-black" : "text-white"}`}>
-            Yes, I do
-          </p>
-          <p className={`text-[12px] font-body mt-1 ${value === true ? "text-black/60" : "text-white-40"}`}>
-            Accounts, savings, property
-          </p>
-        </button>
-        <button
-          onClick={() => onSelect(false)}
-          className={`p-5 rounded-[20px] border min-h-[140px] text-left transition-all active:scale-[0.97] ${
-            value === false ? "bg-gradient-lemon border-black/20 shadow-lemon" : "bg-navy border-white-10"
-          }`}
-        >
-          <IconMapPin size={30} className={value === false ? "text-black" : "text-lemon"} />
-          <p className={`mt-3 text-[15px] font-bold font-display ${value === false ? "text-black" : "text-white"}`}>
-            Just France for now
-          </p>
-        </button>
-      </div>
-      <button
-        onClick={() => setOpen(!open)}
-        className="mt-4 inline-flex items-center gap-1 text-lemon text-[13px] font-bold font-body"
-      >
-        What counts? <IconChevronDown size={14} className={open ? "rotate-180 transition-transform" : "transition-transform"} />
-      </button>
-      {open && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: "auto" }}
-          className="mt-2 p-4 rounded-[14px] bg-navy text-white-60 text-[13px] font-body"
-        >
-          Bank accounts, property, investments, pensions, or any income source
-          still based in your home country.
-        </motion.div>
-      )}
-    </>
-  );
-}
-
-const DOCS = [
-  { key: "bank", label: "French bank account", Icon: IconCard },
-  { key: "sim", label: "French phone number", Icon: IconPhone },
-  { key: "address", label: "Proof of address", Icon: IconHome },
-  { key: "secu", label: "Social Security number", Icon: IconShield },
-  { key: "vitale", label: "Carte Vitale", Icon: IconHeartPulse },
-  { key: "visa", label: "Residence permit", Icon: IconStamp },
-  { key: "fiscal", label: "French tax number", Icon: IconReceipt },
-  { key: "caf", label: "CAF number", Icon: IconPerson },
-];
-
-function Step8Documents({ docs, onToggle }: { docs: Record<string, boolean>; onToggle: (k: string) => void }) {
-  return (
-    <>
-      <StepHeader bubble="Last one! What's already sorted? I'll skip what you don't need." h1="What do you already have?" />
-      <div className="space-y-2.5">
+      <Heading a="Qu'as-tu" b="déjà ?" c="" ca="var(--vivid-orange)" cb="#fff" cc="" />
+      <p className="text-white/50 italic mb-3 text-sm">Coche ce que tu possèdes déjà.</p>
+      <div className="flex flex-wrap gap-2 mb-6">
         {DOCS.map((d) => {
-          const on = !!docs[d.key];
+          const has = already.includes(d);
           return (
             <button
-              key={d.key}
-              onClick={() => onToggle(d.key)}
-              className="w-full px-4 py-3.5 flex items-center gap-3 rounded-[14px] bg-navy border border-white-10 active:scale-[0.99] transition-transform"
+              key={d}
+              onClick={() => set({ already_has: toggle(d, already) })}
+              className="px-3 py-2 rounded-full text-xs font-label"
+              style={{
+                background: has ? "var(--vivid-green)" : "var(--bg-surface)",
+                color: has ? "#fff" : "rgba(255,255,255,0.7)",
+              }}
             >
-              <d.Icon size={20} className={on ? "text-lemon" : "text-white-60"} />
-              <span className="flex-1 text-left text-white text-[14px] font-body font-semibold">{d.label}</span>
-              <span
-                className={`w-11 h-6 rounded-full p-0.5 transition-colors ${on ? "bg-lemon" : "bg-white-15"}`}
-                style={on ? { boxShadow: "0 0 8px rgba(248,255,161,0.5)" } : undefined}
-              >
-                <motion.span
-                  layout
-                  className={`block h-5 w-5 rounded-full ${on ? "bg-black" : "bg-white-40"}`}
-                  style={{ marginLeft: on ? "auto" : 0 }}
-                />
-              </span>
+              {has ? "✓ " : ""}{d}
             </button>
           );
         })}
       </div>
+      <p className="text-white/50 italic mb-3 text-sm">Que veux-tu accomplir ?</p>
+      <div className="space-y-2">
+        {GOALS.map((g) => {
+          const active = goals.includes(g);
+          return (
+            <button
+              key={g}
+              onClick={() => set({ goals: toggle(g, goals) })}
+              className="w-full rounded-xl p-3.5 text-left flex items-center justify-between"
+              style={{
+                background: active ? "var(--lemon)" : "var(--bg-surface)",
+                color: active ? "#000" : "#fff",
+              }}
+            >
+              <span className="font-label text-sm">{g}</span>
+              {active && <CheckIcon size={18} />}
+            </button>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
+interface UploadResult { name: string; status: "ok" | "error"; reason?: string }
+
+function Step8({ onUpload }: { onUpload: (name: string) => void }) {
+  const [results, setResults] = useState<UploadResult[]>([]);
+  const handleFiles = (files: FileList) => {
+    const next: UploadResult[] = [];
+    Array.from(files).forEach((file) => {
+      if (file.size > 10 * 1024 * 1024) {
+        next.push({ name: file.name, status: "error", reason: "Trop lourd (>10 MB)" });
+        return;
+      }
+      const ok = /\.(pdf|jpg|jpeg|png|webp|txt)$/i.test(file.name);
+      if (!ok) {
+        next.push({ name: file.name, status: "error", reason: "Format non supporté" });
+        return;
+      }
+      onUpload(file.name);
+      next.push({ name: file.name, status: "ok" });
+    });
+    setResults((r) => [...r, ...next]);
+  };
+  return (
+    <>
+      <Heading a="Ajoute" b="tes documents" c="officiels." ca="var(--lemon)" cb="#fff" cc="var(--lilac)" />
+      <p className="text-white/50 italic mb-6 text-sm">Passeport, visa, titre de séjour... Tu peux en uploader plusieurs d'un coup.</p>
+      <label
+        className="block rounded-3xl p-8 text-center cursor-pointer transition-all"
+        style={{ background: "var(--bg-surface)", border: "2px dashed var(--lemon)" }}
+      >
+        <input
+          type="file"
+          multiple
+          className="hidden"
+          accept=".pdf,.jpg,.jpeg,.png,.webp,.txt"
+          onChange={(e) => e.target.files && handleFiles(e.target.files)}
+        />
+        <div className="inline-flex w-14 h-14 rounded-full bg-[var(--lemon)]/20 items-center justify-center mb-3 text-[var(--lemon)]">
+          <UploadIcon size={26} />
+        </div>
+        <p className="font-label font-medium text-white">Glisse tes fichiers ici</p>
+        <p className="text-white/40 italic text-xs mt-1">PDF, JPG, PNG, WEBP — 10 MB max par fichier · multi-fichiers ✓</p>
+      </label>
+      {results.length > 0 && (
+        <div className="mt-4 space-y-2 animate-fade-in">
+          {results.map((r, i) => (
+            <div key={i} className="rounded-xl p-3 flex items-center gap-2 text-sm"
+              style={{ background: "var(--bg-surface)", border: `1px solid ${r.status === "ok" ? "var(--vivid-green)" : "var(--vivid-red)"}` }}>
+              {r.status === "ok" ? <CheckIcon size={14} className="text-[var(--vivid-green)]" /> : <span className="text-[var(--vivid-red)]">✕</span>}
+              <span className="text-white truncate flex-1">{r.name}</span>
+              {r.reason && <span className="text-[var(--vivid-red)] text-xs italic">{r.reason}</span>}
+            </div>
+          ))}
+        </div>
+      )}
     </>
   );
 }

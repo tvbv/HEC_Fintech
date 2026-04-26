@@ -11,14 +11,12 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
-import { Route as LoadingRouteImport } from './routes/loading'
-import { Route as HomeRouteImport } from './routes/home'
+import { Route as GeneratingRouteImport } from './routes/generating'
 import { Route as DeadlinesRouteImport } from './routes/deadlines'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as CityRouteImport } from './routes/city'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as LevelTaxesRouteImport } from './routes/level.taxes'
-import { Route as LevelBenefitsRouteImport } from './routes/level.benefits'
-import { Route as LevelBankingRouteImport } from './routes/level.banking'
+import { Route as BuildingIdRouteImport } from './routes/building.$id'
 
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
@@ -30,14 +28,9 @@ const OnboardingRoute = OnboardingRouteImport.update({
   path: '/onboarding',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LoadingRoute = LoadingRouteImport.update({
-  id: '/loading',
-  path: '/loading',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HomeRoute = HomeRouteImport.update({
-  id: '/home',
-  path: '/home',
+const GeneratingRoute = GeneratingRouteImport.update({
+  id: '/generating',
+  path: '/generating',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DeadlinesRoute = DeadlinesRouteImport.update({
@@ -50,114 +43,95 @@ const DashboardRoute = DashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CityRoute = CityRouteImport.update({
+  id: '/city',
+  path: '/city',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LevelTaxesRoute = LevelTaxesRouteImport.update({
-  id: '/level/taxes',
-  path: '/level/taxes',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LevelBenefitsRoute = LevelBenefitsRouteImport.update({
-  id: '/level/benefits',
-  path: '/level/benefits',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LevelBankingRoute = LevelBankingRouteImport.update({
-  id: '/level/banking',
-  path: '/level/banking',
+const BuildingIdRoute = BuildingIdRouteImport.update({
+  id: '/building/$id',
+  path: '/building/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/city': typeof CityRoute
   '/dashboard': typeof DashboardRoute
   '/deadlines': typeof DeadlinesRoute
-  '/home': typeof HomeRoute
-  '/loading': typeof LoadingRoute
+  '/generating': typeof GeneratingRoute
   '/onboarding': typeof OnboardingRoute
   '/profile': typeof ProfileRoute
-  '/level/banking': typeof LevelBankingRoute
-  '/level/benefits': typeof LevelBenefitsRoute
-  '/level/taxes': typeof LevelTaxesRoute
+  '/building/$id': typeof BuildingIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/city': typeof CityRoute
   '/dashboard': typeof DashboardRoute
   '/deadlines': typeof DeadlinesRoute
-  '/home': typeof HomeRoute
-  '/loading': typeof LoadingRoute
+  '/generating': typeof GeneratingRoute
   '/onboarding': typeof OnboardingRoute
   '/profile': typeof ProfileRoute
-  '/level/banking': typeof LevelBankingRoute
-  '/level/benefits': typeof LevelBenefitsRoute
-  '/level/taxes': typeof LevelTaxesRoute
+  '/building/$id': typeof BuildingIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/city': typeof CityRoute
   '/dashboard': typeof DashboardRoute
   '/deadlines': typeof DeadlinesRoute
-  '/home': typeof HomeRoute
-  '/loading': typeof LoadingRoute
+  '/generating': typeof GeneratingRoute
   '/onboarding': typeof OnboardingRoute
   '/profile': typeof ProfileRoute
-  '/level/banking': typeof LevelBankingRoute
-  '/level/benefits': typeof LevelBenefitsRoute
-  '/level/taxes': typeof LevelTaxesRoute
+  '/building/$id': typeof BuildingIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/city'
     | '/dashboard'
     | '/deadlines'
-    | '/home'
-    | '/loading'
+    | '/generating'
     | '/onboarding'
     | '/profile'
-    | '/level/banking'
-    | '/level/benefits'
-    | '/level/taxes'
+    | '/building/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/city'
     | '/dashboard'
     | '/deadlines'
-    | '/home'
-    | '/loading'
+    | '/generating'
     | '/onboarding'
     | '/profile'
-    | '/level/banking'
-    | '/level/benefits'
-    | '/level/taxes'
+    | '/building/$id'
   id:
     | '__root__'
     | '/'
+    | '/city'
     | '/dashboard'
     | '/deadlines'
-    | '/home'
-    | '/loading'
+    | '/generating'
     | '/onboarding'
     | '/profile'
-    | '/level/banking'
-    | '/level/benefits'
-    | '/level/taxes'
+    | '/building/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CityRoute: typeof CityRoute
   DashboardRoute: typeof DashboardRoute
   DeadlinesRoute: typeof DeadlinesRoute
-  HomeRoute: typeof HomeRoute
-  LoadingRoute: typeof LoadingRoute
+  GeneratingRoute: typeof GeneratingRoute
   OnboardingRoute: typeof OnboardingRoute
   ProfileRoute: typeof ProfileRoute
-  LevelBankingRoute: typeof LevelBankingRoute
-  LevelBenefitsRoute: typeof LevelBenefitsRoute
-  LevelTaxesRoute: typeof LevelTaxesRoute
+  BuildingIdRoute: typeof BuildingIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -176,18 +150,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/loading': {
-      id: '/loading'
-      path: '/loading'
-      fullPath: '/loading'
-      preLoaderRoute: typeof LoadingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/home': {
-      id: '/home'
-      path: '/home'
-      fullPath: '/home'
-      preLoaderRoute: typeof HomeRouteImport
+    '/generating': {
+      id: '/generating'
+      path: '/generating'
+      fullPath: '/generating'
+      preLoaderRoute: typeof GeneratingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/deadlines': {
@@ -204,6 +171,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/city': {
+      id: '/city'
+      path: '/city'
+      fullPath: '/city'
+      preLoaderRoute: typeof CityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -211,25 +185,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/level/taxes': {
-      id: '/level/taxes'
-      path: '/level/taxes'
-      fullPath: '/level/taxes'
-      preLoaderRoute: typeof LevelTaxesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/level/benefits': {
-      id: '/level/benefits'
-      path: '/level/benefits'
-      fullPath: '/level/benefits'
-      preLoaderRoute: typeof LevelBenefitsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/level/banking': {
-      id: '/level/banking'
-      path: '/level/banking'
-      fullPath: '/level/banking'
-      preLoaderRoute: typeof LevelBankingRouteImport
+    '/building/$id': {
+      id: '/building/$id'
+      path: '/building/$id'
+      fullPath: '/building/$id'
+      preLoaderRoute: typeof BuildingIdRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -237,15 +197,13 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CityRoute: CityRoute,
   DashboardRoute: DashboardRoute,
   DeadlinesRoute: DeadlinesRoute,
-  HomeRoute: HomeRoute,
-  LoadingRoute: LoadingRoute,
+  GeneratingRoute: GeneratingRoute,
   OnboardingRoute: OnboardingRoute,
   ProfileRoute: ProfileRoute,
-  LevelBankingRoute: LevelBankingRoute,
-  LevelBenefitsRoute: LevelBenefitsRoute,
-  LevelTaxesRoute: LevelTaxesRoute,
+  BuildingIdRoute: BuildingIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
