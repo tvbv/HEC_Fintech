@@ -5,7 +5,7 @@ import { useApp } from "@/lib/store";
 import { fetchBankRecommendations, getBankRecommendations, STATIC_BANK_RECOS } from "@/lib/api";
 import type { Recommendation } from "@/lib/buildings";
 import { buildingThemes, type BuildingId } from "@/lib/theme";
-import { BUILDING_CONTENT } from "@/lib/buildings";
+import { getBuildingContent } from "@/lib/buildings";
 import { CleoCharacter } from "@/components/CleoCharacter";
 import { CheckIcon, ChevronIcon, StarIcon, CloseIcon } from "@/components/icons";
 import { Confetti } from "@/components/Confetti";
@@ -26,7 +26,7 @@ const VALID: BuildingId[] = ["bank", "taxes", "housing", "insurance", "transport
 function BuildingScreen() {
   const { id } = useParams({ from: "/building/$id" });
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const buildingId = id as BuildingId;
   if (!VALID.includes(buildingId)) {
     return (
@@ -35,7 +35,7 @@ function BuildingScreen() {
       </div>
     );
   }
-  const content = BUILDING_CONTENT[buildingId as Exclude<BuildingId, "airport">];
+  const content = getBuildingContent(i18n.language)[buildingId as Exclude<BuildingId, "airport">];
   const theme = buildingThemes[buildingId];
   const { buildingProgress, toggleStep, completeBuilding, completedBuildings, onboarding } = useApp();
   const checked = buildingProgress[buildingId] ?? [];
@@ -189,7 +189,10 @@ function BuildingScreen() {
             >
               {r.badge && (
                 <div className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold mb-2" style={{ background: "var(--lemon)", color: "#000" }}>
-                  {r.badge}
+                  {r.badge === "MEILLEUR MATCH" ? t("building.best_match") :
+                   r.badge === "PRIORITAIRE" ? t("building.priority") :
+                   r.badge === "INCONTOURNABLE" ? t("building.incontournable") :
+                   r.badge === "OFFICIEL" ? t("building.official") : r.badge}
                 </div>
               )}
               <div className="flex items-start justify-between mb-1">
@@ -200,11 +203,11 @@ function BuildingScreen() {
                   ))}
                 </div>
               </div>
-              <p className="text-white/70 italic text-sm mb-3">{r.tagline}</p>
+              <p className="text-white/70 italic text-sm mb-3">{i18n.language === "en" && r.tagline_en ? r.tagline_en : r.tagline}</p>
               <div className="grid grid-cols-3 gap-2">
                 {r.metrics.map((m) => (
                   <div key={m.label} className="rounded-lg bg-black/30 px-2 py-2">
-                    <p className="text-[10px] text-white/50 uppercase tracking-wide">{m.label}</p>
+                    <p className="text-[10px] text-white/50 uppercase tracking-wide">{i18n.language === "en" && m.label_en ? m.label_en : m.label}</p>
                     <p className="text-white font-bold text-sm">{m.value}</p>
                   </div>
                 ))}
