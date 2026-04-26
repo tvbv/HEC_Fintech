@@ -51,6 +51,7 @@ export interface ChatMessage {
 
 interface AppState {
   hasOnboarded: boolean;
+  profileId: number | null;
   onboarding: Partial<OnboardingData>;
   completedBuildings: BuildingId[];
   buildingProgress: Record<string, string[]>;
@@ -63,6 +64,7 @@ interface AppState {
   chatMessages: ChatMessage[];
 
   setOnboarding: (data: Partial<OnboardingData>) => void;
+  setProfileId: (id: number) => void;
   completeOnboarding: () => void;
   completeBuilding: (id: BuildingId) => void;
   unlockBuildingChain: (id: BuildingId) => void;
@@ -88,6 +90,7 @@ export const useApp = create<AppState>()(
   persist(
     (set) => ({
       hasOnboarded: false,
+      profileId: null,
       onboarding: {},
       completedBuildings: [],
       buildingProgress: {},
@@ -100,6 +103,7 @@ export const useApp = create<AppState>()(
       chatMessages: [],
 
       setOnboarding: (data) => set((s) => ({ onboarding: { ...s.onboarding, ...data } })),
+      setProfileId: (id) => set({ profileId: id }),
       completeOnboarding: () => set({ hasOnboarded: true, completedBuildings: ["airport"] }),
       completeBuilding: (id) =>
         set((s) =>
@@ -166,6 +170,7 @@ export const useApp = create<AppState>()(
       reset: () =>
         set({
           hasOnboarded: false,
+          profileId: null,
           onboarding: {},
           completedBuildings: [],
           buildingProgress: {},

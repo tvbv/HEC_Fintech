@@ -3,6 +3,98 @@ import type { Recommendation } from "@/lib/buildings";
 
 const API_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:8000";
 
+// ---------------------------------------------------------------------------
+// Intake (onboarding profile → DB)
+// ---------------------------------------------------------------------------
+
+const EMPLOYMENT_MAP: Record<string, string> = {
+  salaried: "employed_fulltime",
+  searching: "between_jobs",
+  student: "student",
+  freelance: "freelance",
+  retired: "retired",
+};
+
+const TIME_MAP: Record<string, string> = {
+  less_3m: "just_arrived",
+  "4_months": "settling_in",
+  "1_3_years": "established",
+  "3_plus": "established",
+};
+
+const ALREADY_MAP: Record<string, string> = {
+  "Titre de séjour": "residence_permit",
+  "Justificatif de domicile": "proof_of_address",
+  "RIB français": "local_bank_account",
+  "Numéro fiscal": "tax_number",
+};
+
+const ALLOWED_ALREADY = new Set([
+  "local_bank_account",
+  "local_phone",
+  "proof_of_address",
+  "social_security_number",
+  "health_card",
+  "residence_permit",
+  "tax_number",
+  "benefits_number",
+]);
+
+export async function sendIntake(onboarding: Partial<OnboardingData>): Promise<{ profile_id: number }> {
+  const alreadyHas = (onboarding.already_has ?? [])
+    .map((label) => ALREADY_MAP[label] ?? label)
+    .filter((code) => ALLOWED_ALREADY.has(code));
+
+  const payload = {
+    first_name: onboarding.first_name ?? "",
+    last_name: onboarding.last_name ?? "",
+    date_of_birth: onboarding.date_of_birth ?? "",
+    nationality: onboarding.nationality ?? "",
+    country_of_residence: onboarding.nationality ?? "",   // proxy : pays d'origine
+    country_moving_to: onboarding.country_moving_to ?? "",
+    employment_status: EMPLOYMENT_MAP[onboarding.employment_status ?? ""] ?? onboarding.employment_status ?? "",
+    has_income: onboarding.has_income ?? false,
+    income_bracket: onboarding.has_income ? (onboarding.income_bracket ?? null) : null,
+    currency: onboarding.currency ?? "EUR",
+    time_at_destination: TIME_MAP[onboarding.time_in_france ?? ""] ?? null,
+    has_financial_ties_abroad: onboarding.has_financial_ties_abroad ?? null,
+    already_has: alreadyHas,
+    goals: onboarding.goals ?? [],
+  };
+
+  const res = await fetch(`${API_URL}/intake`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) throw new Error(`POST /intake failed: ${res.status}`);
+  return res.json() as Promise<{ profile_id: number }>;
+}
+
+// ---------------------------------------------------------------------------
+// Chat
+// ---------------------------------------------------------------------------
+
+export interface ChatHistoryItem {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export async function sendChat(
+  profileId: number,
+  message: string,
+  history: ChatHistoryItem[],
+): Promise<{ reply: string }> {
+  const res = await fetch(`${API_URL}/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ profile_id: profileId, message, history }),
+  });
+  if (!res.ok) throw new Error(`POST /chat failed: ${res.status}`);
+  return res.json() as Promise<{ reply: string }>;
+}
+
 interface ApiReco {
   id: string;
   name: string;

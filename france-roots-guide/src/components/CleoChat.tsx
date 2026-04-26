@@ -2,9 +2,9 @@ import { useState, useRef, useEffect } from "react";
 import { useLocation } from "@tanstack/react-router";
 import ReactMarkdown from "react-markdown";
 import { useApp } from "@/lib/store";
+import { sendChat } from "@/lib/api";
 import { CleoCharacter } from "./CleoCharacter";
 import { CloseIcon } from "./icons";
-import { chatWithCleo } from "@/utils/chat.functions";
 
 const HIDDEN_ROUTES = ["/", "/onboarding", "/generating"];
 
@@ -13,7 +13,7 @@ export function CleoChat() {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const { chatMessages, appendChat, onboarding, completedBuildings, uploadedDocuments, userBenefits } = useApp();
+  const { chatMessages, appendChat, onboarding, completedBuildings, uploadedDocuments, userBenefits, profileId } = useApp();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -25,27 +25,21 @@ export function CleoChat() {
   const send = async () => {
     const text = input.trim();
     if (!text || loading) return;
+
+    if (!profileId) {
+      appendChat({ role: "assistant", content: "Termine d'abord l'onboarding pour que je puisse personnaliser mes réponses !", ts: Date.now() });
+      return;
+    }
+
     setInput("");
     appendChat({ role: "user", content: text, ts: Date.now() });
     setLoading(true);
     try {
-      const res = await chatWithCleo({
-        data: {
-          messages: [...chatMessages, { role: "user" as const, content: text }].map(({ role, content }) => ({ role, content })),
-          context: {
-            first_name: onboarding.first_name,
-            nationality: onboarding.nationality,
-            employment_status: onboarding.employment_status,
-            completed_buildings: completedBuildings,
-            documents_count: uploadedDocuments.length,
-            benefits: userBenefits.map((b) => b.name),
-          },
-        },
-      });
-      if (res.reply) appendChat({ role: "assistant", content: res.reply, ts: Date.now() });
-      else appendChat({ role: "assistant", content: `Désolé, ${res.error}`, ts: Date.now() });
+      const history = chatMessages.map(({ role, content }) => ({ role, content }));
+      const res = await sendChat(profileId, text, history);
+      appendChat({ role: "assistant", content: res.reply, ts: Date.now() });
     } catch {
-      appendChat({ role: "assistant", content: "Oups, j'ai eu un souci réseau.", ts: Date.now() });
+      appendChat({ role: "assistant", content: "Oups, j'ai eu un souci réseau. Réessaie dans un instant.", ts: Date.now() });
     } finally {
       setLoading(false);
     }

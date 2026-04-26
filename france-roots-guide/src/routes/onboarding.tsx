@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useApp } from "@/lib/store";
+import { sendIntake } from "@/lib/api";
 import { AmbientGlobe } from "@/components/AmbientGlobe";
 import { CleoCharacter } from "@/components/CleoCharacter";
 import { UploadIcon, CheckIcon, ChevronIcon } from "@/components/icons";
@@ -58,14 +59,28 @@ const GOALS = [
 
 function Onboarding() {
   const navigate = useNavigate();
-  const { onboarding, setOnboarding, addDocument, completeOnboarding } = useApp();
+  const { onboarding, setOnboarding, addDocument, completeOnboarding, setProfileId } = useApp();
   const [step, setStep] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const next = () => {
-    if (step < STEPS - 1) setStep(step + 1);
-    else {
-      completeOnboarding();
-      navigate({ to: "/generating" });
+  const next = async () => {
+    if (step < STEPS - 1) {
+      setStep(step + 1);
+    } else {
+      setSubmitting(true);
+      setSubmitError(null);
+      try {
+        const { profile_id } = await sendIntake(onboarding);
+        setProfileId(profile_id);
+      } catch {
+        // En cas d'erreur réseau on continue quand même (expérience hackathon)
+        setSubmitError("Profil non synchronisé — tu peux continuer.");
+      } finally {
+        setSubmitting(false);
+        completeOnboarding();
+        navigate({ to: "/generating" });
+      }
     }
   };
 
@@ -118,6 +133,9 @@ function Onboarding() {
 
       {/* footer CTA */}
       <div className="fixed bottom-0 inset-x-0 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A] to-transparent pt-8 pb-6 px-5 z-20">
+        {submitError && (
+          <p className="text-center text-xs text-orange-400 italic mb-2">{submitError}</p>
+        )}
         <div className="max-w-md mx-auto flex gap-3">
           {step > 0 && (
             <button onClick={prev} className="px-5 py-3.5 rounded-2xl bg-[#1C1C1E] text-white font-label">
@@ -126,15 +144,15 @@ function Onboarding() {
           )}
           <button
             onClick={next}
-            disabled={!canContinue}
+            disabled={!canContinue || submitting}
             className="flex-1 py-3.5 rounded-2xl font-label font-semibold transition-opacity"
             style={{
               background: "var(--lemon)",
               color: "#000",
-              opacity: canContinue ? 1 : 0.35,
+              opacity: canContinue && !submitting ? 1 : 0.35,
             }}
           >
-            {step === STEPS - 1 ? "Terminer" : "Continuer →"}
+            {submitting ? "Envoi…" : step === STEPS - 1 ? "Terminer" : "Continuer →"}
           </button>
           {step === 8 && (
             <button onClick={next} className="px-4 py-3.5 rounded-2xl bg-[#1C1C1E] text-white/60 text-sm font-label">
@@ -428,26 +446,49 @@ function Step7({ data, set }: any) {
   );
 }
 
-interface UploadResult { name: string; status: "ok" | "error"; reason?: string }
+const API_URL_UPLOAD = (import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:8000";
+
+interface UploadResult { name: string; status: "ok" | "error" | "loading"; reason?: string }
 
 function Step8({ onUpload }: { onUpload: (name: string) => void }) {
   const [results, setResults] = useState<UploadResult[]>([]);
+  const { setOnboarding } = useApp();
+
   const handleFiles = (files: FileList) => {
-    const next: UploadResult[] = [];
-    Array.from(files).forEach((file) => {
+    Array.from(files).forEach(async (file) => {
       if (file.size > 10 * 1024 * 1024) {
-        next.push({ name: file.name, status: "error", reason: "Trop lourd (>10 MB)" });
+        setResults((r) => [...r, { name: file.name, status: "error", reason: "Trop lourd (>10 MB)" }]);
         return;
       }
       const ok = /\.(pdf|jpg|jpeg|png|webp|txt)$/i.test(file.name);
       if (!ok) {
-        next.push({ name: file.name, status: "error", reason: "Format non supporté" });
+        setResults((r) => [...r, { name: file.name, status: "error", reason: "Format non supporté" }]);
         return;
       }
-      onUpload(file.name);
-      next.push({ name: file.name, status: "ok" });
+
+      setResults((r) => [...r, { name: file.name, status: "loading" }]);
+
+      try {
+        const form = new FormData();
+        form.append("file", file);
+        const res = await fetch(`${API_URL_UPLOAD}/documents`, { method: "POST", body: form });
+        if (res.ok) {
+          const { extracted } = await res.json() as { extracted: Record<string, string | null> };
+          // Pré-remplir le profil avec les champs extraits non nuls
+          const patch: Record<string, string> = {};
+          if (extracted.first_name) patch.first_name = extracted.first_name;
+          if (extracted.last_name) patch.last_name = extracted.last_name;
+          if (extracted.date_of_birth) patch.date_of_birth = extracted.date_of_birth;
+          if (extracted.nationality) patch.nationality = extracted.nationality;
+          if (Object.keys(patch).length > 0) setOnboarding(patch);
+        }
+        onUpload(file.name);
+        setResults((r) => r.map((x) => x.name === file.name && x.status === "loading" ? { ...x, status: "ok" } : x));
+      } catch {
+        setResults((r) => r.map((x) => x.name === file.name && x.status === "loading" ? { ...x, status: "error", reason: "Erreur réseau" } : x));
+        onUpload(file.name); // on garde quand même localement
+      }
     });
-    setResults((r) => [...r, ...next]);
   };
   return (
     <>
@@ -474,9 +515,15 @@ function Step8({ onUpload }: { onUpload: (name: string) => void }) {
         <div className="mt-4 space-y-2 animate-fade-in">
           {results.map((r, i) => (
             <div key={i} className="rounded-xl p-3 flex items-center gap-2 text-sm"
-              style={{ background: "var(--bg-surface)", border: `1px solid ${r.status === "ok" ? "var(--vivid-green)" : "var(--vivid-red)"}` }}>
-              {r.status === "ok" ? <CheckIcon size={14} className="text-[var(--vivid-green)]" /> : <span className="text-[var(--vivid-red)]">✕</span>}
+              style={{
+                background: "var(--bg-surface)",
+                border: `1px solid ${r.status === "ok" ? "var(--vivid-green)" : r.status === "loading" ? "rgba(255,255,255,0.2)" : "var(--vivid-red)"}`,
+              }}>
+              {r.status === "ok" && <CheckIcon size={14} className="text-[var(--vivid-green)]" />}
+              {r.status === "loading" && <span className="w-3.5 h-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin" />}
+              {r.status === "error" && <span className="text-[var(--vivid-red)]">✕</span>}
               <span className="text-white truncate flex-1">{r.name}</span>
+              {r.status === "loading" && <span className="text-white/40 text-xs italic">Analyse IA…</span>}
               {r.reason && <span className="text-[var(--vivid-red)] text-xs italic">{r.reason}</span>}
             </div>
           ))}
