@@ -10,6 +10,7 @@ Routes registered:
   POST /banks/recommend     → AI-powered bank recommendations
   GET  /banks               → full bank catalogue
   GET  /banks/{id}          → single bank detail
+  POST /chat                → AI concierge (Cerebras + Tavily)
 """
 
 from __future__ import annotations
@@ -26,7 +27,7 @@ from database import init_db
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
-from routes import banks, document_upload, health, intake
+from routes import banks, chat, document_upload, health, intake
 
 logging.basicConfig(
     level=logging.INFO,
@@ -76,3 +77,4 @@ app.include_router(health.router)
 app.include_router(intake.router, prefix="/intake", tags=["profile"])
 app.include_router(document_upload.router, prefix="/documents", tags=["documents"])
 app.include_router(banks.router, prefix="/banks", tags=["banking"])
+app.include_router(chat.router, prefix="/chat", tags=["chat"])

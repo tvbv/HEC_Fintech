@@ -138,3 +138,29 @@ class RecommendRequest(BaseModel):
 
     profile: UserProfile
     documents: list[Document] = []
+
+
+# ---------------------------------------------------------------------------
+# 3. Chat / concierge
+# ---------------------------------------------------------------------------
+
+
+class ChatMessage(BaseModel):
+    """A single turn in the conversation history."""
+
+    role: Literal["user", "assistant"]
+    content: str
+
+
+class ChatRequest(BaseModel):
+    """Request body for POST /chat."""
+
+    profile_id: int
+    message: str
+    history: list[ChatMessage] = []
+
+
+class ChatResponse(BaseModel):
+    """Response returned by POST /chat."""
+
+    reply: str
