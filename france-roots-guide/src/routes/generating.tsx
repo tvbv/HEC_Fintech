@@ -2,20 +2,21 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { CleoCharacter } from "@/components/CleoCharacter";
 import { buildingThemes, buildingOrder } from "@/lib/theme";
+import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute("/generating")({
   component: Generating,
 });
 
-const LINES = [
-  "J'analyse ton profil…",
-  "Je calcule tes droits…",
-  "Je trace ta route…",
-  "Ta ville est prête !",
-];
-
 function Generating() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
+  const LINES = [
+    t("generating.line0"),
+    t("generating.line1"),
+    t("generating.line2"),
+    t("generating.line3"),
+  ];
   const [progress, setProgress] = useState(0);
   const [lineIdx, setLineIdx] = useState(0);
   const [typed, setTyped] = useState("");

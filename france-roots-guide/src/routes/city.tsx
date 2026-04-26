@@ -8,6 +8,7 @@ import { BuildingSVG } from "@/components/BuildingSVG";
 import { LockIcon, CheckIcon } from "@/components/icons";
 import { HammerIcon } from "@/components/HammerIcon";
 import { BottomNav } from "@/components/BottomNav";
+import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute("/city")({
   head: () => ({
@@ -24,6 +25,7 @@ const VIEW_W = 360;
 
 function City() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { onboarding, completedBuildings, xp, uploadedDocuments, unlockBuildingChain } = useApp();
   const [shakeId, setShakeId] = useState<BuildingId | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -55,7 +57,7 @@ function City() {
   const handleHammer = (id: BuildingId, e: React.MouseEvent) => {
     e.stopPropagation();
     unlockBuildingChain(id);
-    setToast(`🔨 ${buildingThemes[id].name} débloqué grâce à tes documents !`);
+    setToast(t("city.hammer_toast", { name: buildingThemes[id].name }));
     setTimeout(() => setToast(null), 2600);
   };
 
@@ -87,25 +89,25 @@ function City() {
         <CleoCharacter state="IDLE" size={36} />
         <div className="flex-1">
           <p className="font-display font-bold text-white text-lg leading-tight">
-            Salut {onboarding.first_name ?? "toi"} 👋
+            {t("city.hello", { name: onboarding.first_name ?? "👋" })}
           </p>
           <p className="text-white/40 text-xs italic">
-            {onboarding.city ? `Bienvenue à ${onboarding.city}` : "Bienvenue dans ta ville"}
+            {onboarding.city ? t("city.welcome_to", { city: onboarding.city }) : t("city.welcome_default")}
           </p>
         </div>
         <div className="px-3 py-1.5 rounded-full text-xs font-label font-bold" style={{ background: "var(--lemon)", color: "#000" }}>
-          ⚡ {xp} XP
+          {t("city.xp", { xp })}
         </div>
       </header>
 
       <div className="relative z-10 px-5 pt-6">
         <h1 className="font-display font-black text-3xl mb-1">
-          <span style={{ color: "var(--lemon)" }}>Ta</span>{" "}
-          <span style={{ color: "#fff" }}>ville</span>{" "}
-          <span style={{ color: "var(--lilac)" }}>t'attend.</span>
+          <span style={{ color: "var(--lemon)" }}>{t("city.title_a")}</span>{" "}
+          <span style={{ color: "#fff" }}>{t("city.title_b")}</span>{" "}
+          <span style={{ color: "var(--lilac)" }}>{t("city.title_c")}</span>
         </h1>
         <p className="text-white/50 italic text-sm mb-6">
-          {completedCount}/{buildingOrder.length} étapes complétées
+          {t("city.progress", { done: completedCount, total: buildingOrder.length })}
         </p>
 
         <div className="relative mx-auto" style={{ width: VIEW_W, height: totalH }}>
@@ -155,7 +157,7 @@ function City() {
               <div className="px-3 py-1.5 rounded-2xl flex items-center gap-1.5 shadow-lg animate-float"
                 style={{ background: "var(--lemon)", color: "#000" }}>
                 <span className="text-base">📍</span>
-                <span className="font-label font-bold text-[11px] uppercase tracking-wide">Je suis là</span>
+                <span className="font-label font-bold text-[11px] uppercase tracking-wide">{t("city.here_label")}</span>
               </div>
               <div className="absolute left-1/2 -translate-x-1/2 -bottom-2 w-3 h-3 rotate-45" style={{ background: "var(--lemon)" }} />
             </div>

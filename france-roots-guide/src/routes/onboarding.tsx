@@ -5,6 +5,7 @@ import { sendIntake } from "@/lib/api";
 import { AmbientGlobe } from "@/components/AmbientGlobe";
 import { CleoCharacter } from "@/components/CleoCharacter";
 import { UploadIcon, CheckIcon, ChevronIcon } from "@/components/icons";
+import { useTranslation } from "react-i18next";
 
 
 export const Route = createFileRoute("/onboarding")({
@@ -23,42 +24,42 @@ const NATIONALITIES = [
   { code: "FR", flag: "🇫🇷", name: "France" },
   { code: "UA", flag: "🇺🇦", name: "Ukraine" },
   { code: "US", flag: "🇺🇸", name: "USA" },
-  { code: "GB", flag: "🇬🇧", name: "Royaume-Uni" },
-  { code: "DE", flag: "🇩🇪", name: "Allemagne" },
-  { code: "ES", flag: "🇪🇸", name: "Espagne" },
-  { code: "IT", flag: "🇮🇹", name: "Italie" },
+  { code: "GB", flag: "🇬🇧", name: "United Kingdom" },
+  { code: "DE", flag: "🇩🇪", name: "Germany" },
+  { code: "ES", flag: "🇪🇸", name: "Spain" },
+  { code: "IT", flag: "🇮🇹", name: "Italy" },
   { code: "PT", flag: "🇵🇹", name: "Portugal" },
-  { code: "MA", flag: "🇲🇦", name: "Maroc" },
-  { code: "DZ", flag: "🇩🇿", name: "Algérie" },
-];
-
-const EMPLOYMENT = [
-  { id: "student", label: "Étudiant·e" },
-  { id: "salaried", label: "Salarié·e" },
-  { id: "freelance", label: "Freelance" },
-  { id: "searching", label: "Recherche d'emploi" },
+  { code: "MA", flag: "🇲🇦", name: "Morocco" },
+  { code: "DZ", flag: "🇩🇿", name: "Algeria" },
 ];
 
 const INCOME_BRACKETS = ["<1500", "1500-2000", "2000-3000", "3000-5000", "5000+"];
-const TIMES = [
-  { id: "less_3m", label: "< 3 mois" },
-  { id: "4_months", label: "3-12 mois" },
-  { id: "1_3_years", label: "1-3 ans" },
-  { id: "3_plus", label: "3+ ans" },
-];
 
-const DOCS = [
-  "Carte d'identité", "Passeport", "Visa", "Titre de séjour",
-  "Justificatif de domicile", "RIB français", "Numéro fiscal", "Attestation employeur",
-];
+// Use stable IDs (= backend codes) — display labels come from i18n
+const DOC_IDS = [
+  { id: "id_card", labelKey: "onboarding.doc_id" },
+  { id: "passport", labelKey: "onboarding.doc_passport" },
+  { id: "visa", labelKey: "onboarding.doc_visa" },
+  { id: "residence_permit", labelKey: "onboarding.doc_residence" },
+  { id: "proof_of_address", labelKey: "onboarding.doc_address" },
+  { id: "local_bank_account", labelKey: "onboarding.doc_rib" },
+  { id: "tax_number", labelKey: "onboarding.doc_fiscal" },
+  { id: "employer_certificate", labelKey: "onboarding.doc_employer" },
+] as const;
 
-const GOALS = [
-  "Ouvrir un compte bancaire", "Trouver un logement", "Comprendre les impôts",
-  "Souscrire une assurance", "Obtenir un Navigo", "Trouver un emploi", "Inscrire mes enfants",
-];
+const GOAL_IDS = [
+  { id: "open_bank_account", labelKey: "onboarding.goal_bank" },
+  { id: "find_housing", labelKey: "onboarding.goal_housing" },
+  { id: "understand_taxes", labelKey: "onboarding.goal_taxes" },
+  { id: "get_insurance", labelKey: "onboarding.goal_insurance" },
+  { id: "get_transport_card", labelKey: "onboarding.goal_navigo" },
+  { id: "find_job", labelKey: "onboarding.goal_job" },
+  { id: "enroll_children", labelKey: "onboarding.goal_school" },
+] as const;
 
 function Onboarding() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { onboarding, setOnboarding, addDocument, completeOnboarding, setProfileId } = useApp();
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
@@ -74,8 +75,7 @@ function Onboarding() {
         const { profile_id } = await sendIntake(onboarding);
         setProfileId(profile_id);
       } catch {
-        // En cas d'erreur réseau on continue quand même (expérience hackathon)
-        setSubmitError("Profil non synchronisé — tu peux continuer.");
+        setSubmitError(t("common.profile_not_synced"));
       } finally {
         setSubmitting(false);
         completeOnboarding();
@@ -152,11 +152,11 @@ function Onboarding() {
               opacity: canContinue && !submitting ? 1 : 0.35,
             }}
           >
-            {submitting ? "Envoi…" : step === STEPS - 1 ? "Terminer" : "Continuer →"}
+            {submitting ? t("common.sending") : step === STEPS - 1 ? t("common.finish") : t("common.continue")}
           </button>
           {step === 8 && (
             <button onClick={next} className="px-4 py-3.5 rounded-2xl bg-[#1C1C1E] text-white/60 text-sm font-label">
-              Skip
+              {t("common.skip")}
             </button>
           )}
         </div>
@@ -178,23 +178,25 @@ function Heading({ a, b, c, ca, cb, cc }: { a: string; b: string; c?: string; ca
 const inputCls = "w-full bg-[#1C1C1E] border-b-2 border-white/10 px-4 py-3.5 rounded-t-xl text-white font-body italic placeholder:text-white/30 outline-none focus:border-[var(--lemon)] transition-colors";
 
 function Step0({ data, set }: any) {
+  const { t } = useTranslation();
   return (
     <>
-      <Heading a="On" b="commence par" c="ton prénom ?" ca="var(--lemon)" cb="#fff" cc="var(--lilac)" />
-      <CleoCharacter state="TALKING" message="Ravi de te rencontrer !" size={56} />
+      <Heading a={t("onboarding.step0_title_a")} b={t("onboarding.step0_title_b")} c={t("onboarding.step0_title_c")} ca="var(--lemon)" cb="#fff" cc="var(--lilac)" />
+      <CleoCharacter state="TALKING" message={t("onboarding.step0_cleo")} size={56} />
       <div className="mt-6 space-y-3">
-        <input className={inputCls} placeholder="Prénom" value={data.first_name ?? ""} onChange={(e) => set({ first_name: e.target.value })} />
-        <input className={inputCls} placeholder="Nom" value={data.last_name ?? ""} onChange={(e) => set({ last_name: e.target.value })} />
+        <input className={inputCls} placeholder={t("onboarding.step0_first")} value={data.first_name ?? ""} onChange={(e) => set({ first_name: e.target.value })} />
+        <input className={inputCls} placeholder={t("onboarding.step0_last")} value={data.last_name ?? ""} onChange={(e) => set({ last_name: e.target.value })} />
       </div>
     </>
   );
 }
 
 function Step1({ data, set }: any) {
+  const { t } = useTranslation();
   return (
     <>
-      <Heading a="Quand" b="es-tu né·e" c="?" ca="#fff" cb="var(--lemon)" cc="var(--lilac)" />
-      <p className="text-white/50 italic mb-6">Pour calculer tes droits & ta retraite.</p>
+      <Heading a={t("onboarding.step1_title_a")} b={t("onboarding.step1_title_b")} c={t("onboarding.step1_title_c")} ca="#fff" cb="var(--lemon)" cc="var(--lilac)" />
+      <p className="text-white/50 italic mb-6">{t("onboarding.step1_sub")}</p>
       <input
         type="date"
         className={inputCls}
@@ -206,10 +208,11 @@ function Step1({ data, set }: any) {
 }
 
 function Step2({ data, set }: any) {
+  const { t } = useTranslation();
   return (
     <>
-      <Heading a="D'où" b="viens-tu" c="?" ca="var(--lilac)" cb="#fff" cc="var(--lemon)" />
-      <p className="text-white/50 italic mb-4 text-sm">Choisis ton pays d'origine.</p>
+      <Heading a={t("onboarding.step2_title_a")} b={t("onboarding.step2_title_b")} c={t("onboarding.step2_title_c")} ca="var(--lilac)" cb="#fff" cc="var(--lemon)" />
+      <p className="text-white/50 italic mb-4 text-sm">{t("onboarding.step2_sub")}</p>
       <div className="grid grid-cols-2 gap-3 mt-2">
         {NATIONALITIES.map((n) => {
           const active = data.nationality === n.code;
@@ -249,10 +252,11 @@ const COUNTRIES = [
 ];
 
 function Step3({ data, set }: any) {
+  const { t } = useTranslation();
   return (
     <>
-      <Heading a="Où poses-tu" b="tes valises" c="?" ca="#fff" cb="var(--lemon)" cc="var(--lilac)" />
-      <p className="text-white/50 italic mb-4 text-sm">Choisis ton pays de destination.</p>
+      <Heading a={t("onboarding.step3_title_a")} b={t("onboarding.step3_title_b")} c={t("onboarding.step3_title_c")} ca="#fff" cb="var(--lemon)" cc="var(--lilac)" />
+      <p className="text-white/50 italic mb-4 text-sm">{t("onboarding.step3_sub")}</p>
       <div className="grid grid-cols-3 gap-2">
         {COUNTRIES.map((c) => {
           const active = data.country_moving_to === c.code;
@@ -278,9 +282,16 @@ function Step3({ data, set }: any) {
 }
 
 function Step4({ data, set }: any) {
+  const { t } = useTranslation();
+  const EMPLOYMENT = [
+    { id: "student", label: t("onboarding.step4_student") },
+    { id: "salaried", label: t("onboarding.step4_salaried") },
+    { id: "freelance", label: t("onboarding.step4_freelance") },
+    { id: "searching", label: t("onboarding.step4_searching") },
+  ];
   return (
     <>
-      <Heading a="Tu fais" b="quoi" c="dans la vie ?" ca="var(--lemon)" cb="#fff" cc="var(--vivid-green)" />
+      <Heading a={t("onboarding.step4_title_a")} b={t("onboarding.step4_title_b")} c={t("onboarding.step4_title_c")} ca="var(--lemon)" cb="#fff" cc="var(--vivid-green)" />
       <div className="space-y-3 mt-4">
         {EMPLOYMENT.map((e) => {
           const active = data.employment_status === e.id;
@@ -305,9 +316,10 @@ function Step4({ data, set }: any) {
 }
 
 function Step5({ data, set }: any) {
+  const { t } = useTranslation();
   return (
     <>
-      <Heading a="Tu as déjà" b="des revenus" c="?" ca="#fff" cb="var(--vivid-green)" cc="var(--lemon)" />
+      <Heading a={t("onboarding.step5_title_a")} b={t("onboarding.step5_title_b")} c={t("onboarding.step5_title_c")} ca="#fff" cb="var(--vivid-green)" cc="var(--lemon)" />
       <div className="flex gap-3 mb-6">
         {[true, false].map((v) => (
           <button
@@ -319,13 +331,13 @@ function Step5({ data, set }: any) {
               color: data.has_income === v ? "#000" : "#fff",
             }}
           >
-            {v ? "Oui 💸" : "Pas encore"}
+            {v ? t("onboarding.step5_yes") : t("onboarding.step5_no")}
           </button>
         ))}
       </div>
       {data.has_income && (
         <div className="animate-fade-in">
-          <p className="text-white/60 italic text-sm mb-3">Combien par mois (€) ?</p>
+          <p className="text-white/60 italic text-sm mb-3">{t("onboarding.step5_how_much")}</p>
           <div className="flex flex-wrap gap-2 mb-4">
             {INCOME_BRACKETS.map((b) => (
               <button
@@ -357,25 +369,32 @@ function Step5({ data, set }: any) {
 }
 
 function Step6({ data, set }: any) {
+  const { t } = useTranslation();
+  const TIMES = [
+    { id: "less_3m", label: t("onboarding.time_less3m") },
+    { id: "4_months", label: t("onboarding.time_4months") },
+    { id: "1_3_years", label: t("onboarding.time_1_3y") },
+    { id: "3_plus", label: t("onboarding.time_3plus") },
+  ];
   return (
     <>
-      <Heading a="Depuis" b="quand" c="es-tu là ?" ca="var(--lilac)" cb="var(--lemon)" cc="#fff" />
+      <Heading a={t("onboarding.step6_title_a")} b={t("onboarding.step6_title_b")} c={t("onboarding.step6_title_c")} ca="var(--lilac)" cb="var(--lemon)" cc="#fff" />
       <div className="grid grid-cols-2 gap-3 mb-6">
-        {TIMES.map((t) => (
+        {TIMES.map((ti) => (
           <button
-            key={t.id}
-            onClick={() => set({ time_in_france: t.id })}
+            key={ti.id}
+            onClick={() => set({ time_in_france: ti.id })}
             className="rounded-2xl p-4 font-label font-medium"
             style={{
-              background: data.time_in_france === t.id ? "var(--lemon)" : "var(--bg-surface)",
-              color: data.time_in_france === t.id ? "#000" : "#fff",
+              background: data.time_in_france === ti.id ? "var(--lemon)" : "var(--bg-surface)",
+              color: data.time_in_france === ti.id ? "#000" : "#fff",
             }}
           >
-            {t.label}
+            {ti.label}
           </button>
         ))}
       </div>
-      <p className="text-white/60 italic text-sm mb-3">Tu as gardé des comptes ou biens à l'étranger ?</p>
+      <p className="text-white/60 italic text-sm mb-3">{t("onboarding.step6_financial_ties")}</p>
       <div className="flex gap-3">
         {[true, false].map((v) => (
           <button
@@ -387,7 +406,7 @@ function Step6({ data, set }: any) {
               color: data.has_financial_ties_abroad === v ? "#000" : "#fff",
             }}
           >
-            {v ? "Oui" : "Non"}
+            {v ? t("common.yes") : t("common.no")}
           </button>
         ))}
       </div>
@@ -396,47 +415,48 @@ function Step6({ data, set }: any) {
 }
 
 function Step7({ data, set }: any) {
+  const { t } = useTranslation();
   const goals = data.goals ?? [];
   const already = data.already_has ?? [];
   const toggle = (key: string, list: string[]) =>
     list.includes(key) ? list.filter((x) => x !== key) : [...list, key];
   return (
     <>
-      <Heading a="Qu'as-tu" b="déjà ?" c="" ca="var(--vivid-orange)" cb="#fff" cc="" />
-      <p className="text-white/50 italic mb-3 text-sm">Coche ce que tu possèdes déjà.</p>
+      <Heading a={t("onboarding.step7_title_a")} b={t("onboarding.step7_title_b")} c="" ca="var(--vivid-orange)" cb="#fff" cc="" />
+      <p className="text-white/50 italic mb-3 text-sm">{t("onboarding.step7_sub_have")}</p>
       <div className="flex flex-wrap gap-2 mb-6">
-        {DOCS.map((d) => {
-          const has = already.includes(d);
+        {DOC_IDS.map((d) => {
+          const has = already.includes(d.id);
           return (
             <button
-              key={d}
-              onClick={() => set({ already_has: toggle(d, already) })}
+              key={d.id}
+              onClick={() => set({ already_has: toggle(d.id, already) })}
               className="px-3 py-2 rounded-full text-xs font-label"
               style={{
                 background: has ? "var(--vivid-green)" : "var(--bg-surface)",
                 color: has ? "#fff" : "rgba(255,255,255,0.7)",
               }}
             >
-              {has ? "✓ " : ""}{d}
+              {has ? "✓ " : ""}{t(d.labelKey)}
             </button>
           );
         })}
       </div>
-      <p className="text-white/50 italic mb-3 text-sm">Que veux-tu accomplir ?</p>
+      <p className="text-white/50 italic mb-3 text-sm">{t("onboarding.step7_sub_goals")}</p>
       <div className="space-y-2">
-        {GOALS.map((g) => {
-          const active = goals.includes(g);
+        {GOAL_IDS.map((g) => {
+          const active = goals.includes(g.id);
           return (
             <button
-              key={g}
-              onClick={() => set({ goals: toggle(g, goals) })}
+              key={g.id}
+              onClick={() => set({ goals: toggle(g.id, goals) })}
               className="w-full rounded-xl p-3.5 text-left flex items-center justify-between"
               style={{
                 background: active ? "var(--lemon)" : "var(--bg-surface)",
                 color: active ? "#000" : "#fff",
               }}
             >
-              <span className="font-label text-sm">{g}</span>
+              <span className="font-label text-sm">{t(g.labelKey)}</span>
               {active && <CheckIcon size={18} />}
             </button>
           );
@@ -451,18 +471,19 @@ const API_URL_UPLOAD = (import.meta.env.VITE_API_URL as string | undefined) ?? "
 interface UploadResult { name: string; status: "ok" | "error" | "loading"; reason?: string }
 
 function Step8({ onUpload }: { onUpload: (name: string) => void }) {
+  const { t } = useTranslation();
   const [results, setResults] = useState<UploadResult[]>([]);
   const { setOnboarding } = useApp();
 
   const handleFiles = (files: FileList) => {
     Array.from(files).forEach(async (file) => {
       if (file.size > 10 * 1024 * 1024) {
-        setResults((r) => [...r, { name: file.name, status: "error", reason: "Trop lourd (>10 MB)" }]);
+        setResults((r) => [...r, { name: file.name, status: "error", reason: t("onboarding.step8_too_big") }]);
         return;
       }
       const ok = /\.(pdf|jpg|jpeg|png|webp|txt)$/i.test(file.name);
       if (!ok) {
-        setResults((r) => [...r, { name: file.name, status: "error", reason: "Format non supporté" }]);
+        setResults((r) => [...r, { name: file.name, status: "error", reason: t("onboarding.step8_bad_format") }]);
         return;
       }
 
@@ -474,7 +495,6 @@ function Step8({ onUpload }: { onUpload: (name: string) => void }) {
         const res = await fetch(`${API_URL_UPLOAD}/documents`, { method: "POST", body: form });
         if (res.ok) {
           const { extracted } = await res.json() as { extracted: Record<string, string | null> };
-          // Pré-remplir le profil avec les champs extraits non nuls
           const patch: Record<string, string> = {};
           if (extracted.first_name) patch.first_name = extracted.first_name;
           if (extracted.last_name) patch.last_name = extracted.last_name;
@@ -485,15 +505,15 @@ function Step8({ onUpload }: { onUpload: (name: string) => void }) {
         onUpload(file.name);
         setResults((r) => r.map((x) => x.name === file.name && x.status === "loading" ? { ...x, status: "ok" } : x));
       } catch {
-        setResults((r) => r.map((x) => x.name === file.name && x.status === "loading" ? { ...x, status: "error", reason: "Erreur réseau" } : x));
-        onUpload(file.name); // on garde quand même localement
+        setResults((r) => r.map((x) => x.name === file.name && x.status === "loading" ? { ...x, status: "error", reason: t("onboarding.step8_network_err") } : x));
+        onUpload(file.name);
       }
     });
   };
   return (
     <>
-      <Heading a="Ajoute" b="tes documents" c="officiels." ca="var(--lemon)" cb="#fff" cc="var(--lilac)" />
-      <p className="text-white/50 italic mb-6 text-sm">Passeport, visa, titre de séjour... Tu peux en uploader plusieurs d'un coup.</p>
+      <Heading a={t("onboarding.step8_title_a")} b={t("onboarding.step8_title_b")} c={t("onboarding.step8_title_c")} ca="var(--lemon)" cb="#fff" cc="var(--lilac)" />
+      <p className="text-white/50 italic mb-6 text-sm">{t("onboarding.step8_sub")}</p>
       <label
         className="block rounded-3xl p-8 text-center cursor-pointer transition-all"
         style={{ background: "var(--bg-surface)", border: "2px dashed var(--lemon)" }}
@@ -508,8 +528,8 @@ function Step8({ onUpload }: { onUpload: (name: string) => void }) {
         <div className="inline-flex w-14 h-14 rounded-full bg-[var(--lemon)]/20 items-center justify-center mb-3 text-[var(--lemon)]">
           <UploadIcon size={26} />
         </div>
-        <p className="font-label font-medium text-white">Glisse tes fichiers ici</p>
-        <p className="text-white/40 italic text-xs mt-1">PDF, JPG, PNG, WEBP — 10 MB max par fichier · multi-fichiers ✓</p>
+        <p className="font-label font-medium text-white">{t("onboarding.step8_drop")}</p>
+        <p className="text-white/40 italic text-xs mt-1">{t("onboarding.step8_hint")}</p>
       </label>
       {results.length > 0 && (
         <div className="mt-4 space-y-2 animate-fade-in">
@@ -523,7 +543,7 @@ function Step8({ onUpload }: { onUpload: (name: string) => void }) {
               {r.status === "loading" && <span className="w-3.5 h-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin" />}
               {r.status === "error" && <span className="text-[var(--vivid-red)]">✕</span>}
               <span className="text-white truncate flex-1">{r.name}</span>
-              {r.status === "loading" && <span className="text-white/40 text-xs italic">Analyse IA…</span>}
+              {r.status === "loading" && <span className="text-white/40 text-xs italic">{t("onboarding.step8_analyzing")}</span>}
               {r.reason && <span className="text-[var(--vivid-red)] text-xs italic">{r.reason}</span>}
             </div>
           ))}

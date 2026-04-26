@@ -4,8 +4,10 @@ import { CleoCharacter } from "@/components/CleoCharacter";
 import { PlusIcon, CloseIcon } from "@/components/icons";
 import { BottomSheet } from "@/components/BottomSheet";
 import { CountUp } from "@/components/CountUp";
+import { useTranslation } from "react-i18next";
 
 export function ChildrenSection() {
+  const { t } = useTranslation();
   const { biberons, addBiberon, addBiberonSavings } = useApp();
   const [openId, setOpenId] = useState<string | null>(null);
   const [openAdd, setOpenAdd] = useState(false);
@@ -13,8 +15,8 @@ export function ChildrenSection() {
 
   return (
     <section className="px-5 mb-8">
-      <h2 className="font-display font-bold text-white text-xl mb-1">Tes biberons-épargne</h2>
-      <p className="text-white/50 italic text-sm mb-4">Le lait monte avec ton épargne.</p>
+      <h2 className="font-display font-bold text-white text-xl mb-1">{t("children.title")}</h2>
+      <p className="text-white/50 italic text-sm mb-4">{t("children.subtitle")}</p>
 
       <div className="flex gap-3 overflow-x-auto pb-2 -mx-5 px-5 snap-x">
         {biberons.map((b) => (
@@ -25,12 +27,12 @@ export function ChildrenSection() {
           className="shrink-0 w-[140px] h-[200px] rounded-2xl border-2 border-dashed border-white/15 flex flex-col items-center justify-center gap-2 text-white/40 hover:border-[var(--lemon)] hover:text-[var(--lemon)] transition-colors"
         >
           <PlusIcon size={24} />
-          <span className="text-xs font-label">Ajouter un enfant</span>
+          <span className="text-xs font-label">{t("children.add")}</span>
         </button>
       </div>
 
       <div className="mt-4 rounded-2xl p-4" style={{ background: "var(--vivid-green)" }}>
-        <p className="text-white/80 text-xs uppercase tracking-wider font-label">Total épargne enfants</p>
+        <p className="text-white/80 text-xs uppercase tracking-wider font-label">{t("children.total")}</p>
         <p className="font-display font-black text-white text-3xl mt-1">
           €<CountUp to={total} />
         </p>
@@ -101,14 +103,15 @@ function BiberonCard({ biberon, onClick }: { biberon: Biberon; onClick: () => vo
 }
 
 function AddSavingsSheet({ open, onClose, biberon, onAdd }: { open: boolean; onClose: () => void; biberon?: Biberon; onAdd: (amount: number) => void }) {
+  const { t } = useTranslation();
   const [amount, setAmount] = useState("");
   const [freq, setFreq] = useState<"once" | "monthly">("once");
   if (!biberon) return null;
   return (
-    <BottomSheet open={open} onClose={onClose} title={`Épargne pour ${biberon.child_name}`} heightPercent={60}>
+    <BottomSheet open={open} onClose={onClose} title={t("children.savings_for", { name: biberon.child_name })} heightPercent={60}>
       <div className="space-y-4">
         <div>
-          <label className="text-white/60 text-xs uppercase tracking-wider font-label mb-2 block">Montant (€)</label>
+          <label className="text-white/60 text-xs uppercase tracking-wider font-label mb-2 block">{t("children.amount")}</label>
           <input
             type="number"
             inputMode="numeric"
@@ -119,9 +122,9 @@ function AddSavingsSheet({ open, onClose, biberon, onAdd }: { open: boolean; onC
           />
         </div>
         <div>
-          <label className="text-white/60 text-xs uppercase tracking-wider font-label mb-2 block">Fréquence</label>
+          <label className="text-white/60 text-xs uppercase tracking-wider font-label mb-2 block">{t("children.frequency")}</label>
           <div className="flex gap-2">
-            {([["once", "Unique"], ["monthly", "Mensuel"]] as const).map(([id, label]) => (
+            {([["once", t("children.once")], ["monthly", t("children.monthly")]] as const).map(([id, label]) => (
               <button key={id} onClick={() => setFreq(id)}
                 className="flex-1 py-3 rounded-xl font-label font-medium"
                 style={{ background: freq === id ? "var(--lemon)" : "var(--bg-elevated)", color: freq === id ? "#000" : "#fff" }}>
@@ -136,7 +139,7 @@ function AddSavingsSheet({ open, onClose, biberon, onAdd }: { open: boolean; onC
           className="w-full py-4 rounded-2xl font-display font-bold disabled:opacity-40"
           style={{ background: "var(--lemon)", color: "#000" }}
         >
-          Ajouter à l'épargne
+          {t("children.add_to_savings")}
         </button>
       </div>
     </BottomSheet>
@@ -144,16 +147,17 @@ function AddSavingsSheet({ open, onClose, biberon, onAdd }: { open: boolean; onC
 }
 
 function AddChildSheet({ open, onClose, onAdd }: { open: boolean; onClose: () => void; onAdd: (c: { child_name: string; date_of_birth: string; goal: number }) => void }) {
+  const { t } = useTranslation();
   const [name, setName] = useState("");
   const [dob, setDob] = useState("");
   const [goal, setGoal] = useState("5000");
   return (
-    <BottomSheet open={open} onClose={onClose} title="Nouvel enfant" heightPercent={60}>
+    <BottomSheet open={open} onClose={onClose} title={t("children.new_child")} heightPercent={60}>
       <div className="space-y-3">
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Prénom" className="w-full bg-[#0A0A0A] px-4 py-3.5 rounded-xl text-white outline-none border-2 border-transparent focus:border-[var(--lemon)] font-body italic" />
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("children.firstname")} className="w-full bg-[#0A0A0A] px-4 py-3.5 rounded-xl text-white outline-none border-2 border-transparent focus:border-[var(--lemon)] font-body italic" />
         <input type="date" value={dob} onChange={(e) => setDob(e.target.value)} className="w-full bg-[#0A0A0A] px-4 py-3.5 rounded-xl text-white outline-none border-2 border-transparent focus:border-[var(--lemon)] font-body" />
         <div>
-          <label className="text-white/60 text-xs uppercase tracking-wider font-label block mb-2">Objectif d'épargne (€)</label>
+          <label className="text-white/60 text-xs uppercase tracking-wider font-label block mb-2">{t("children.goal")}</label>
           <input type="number" value={goal} onChange={(e) => setGoal(e.target.value)} className="w-full bg-[#0A0A0A] px-4 py-3.5 rounded-xl text-white outline-none border-2 border-transparent focus:border-[var(--lemon)] font-body" />
         </div>
         <button
@@ -162,7 +166,7 @@ function AddChildSheet({ open, onClose, onAdd }: { open: boolean; onClose: () =>
           className="w-full py-4 rounded-2xl font-display font-bold disabled:opacity-40"
           style={{ background: "var(--lemon)", color: "#000" }}
         >
-          Ajouter
+          {t("children.add_btn")}
         </button>
       </div>
     </BottomSheet>

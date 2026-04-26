@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useApp } from "@/lib/store";
 import { buildingThemes, type BuildingId } from "@/lib/theme";
 import { BottomNav } from "@/components/BottomNav";
+import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute("/deadlines")({
   head: () => ({ meta: [{ title: "Échéances — Concierge" }] }),
@@ -20,13 +21,13 @@ const DEADLINES: Deadline[] = [
   { date: "2025-05-25", title: "Versement CAF", buildingId: "aids", urgency: "low" },
 ];
 
-const FR_MONTHS = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
-const FR_DAYS = ["L", "M", "M", "J", "V", "S", "D"];
-
 function Deadlines() {
+  const { t, i18n } = useTranslation();
   const { onboarding } = useApp();
-  const [cursor, setCursor] = useState(() => new Date(2025, 4, 1)); // mai 2025 par défaut
+  const [cursor, setCursor] = useState(() => new Date(2025, 4, 1));
   const [highlight, setHighlight] = useState<string | null>(null);
+
+  const locale = i18n.language === "en" ? "en-GB" : "fr-FR";
 
   const year = cursor.getFullYear();
   const month = cursor.getMonth();
@@ -50,35 +51,35 @@ function Deadlines() {
   return (
     <main className="min-h-screen pb-28 bg-[#0A0A0A]">
       <header className="px-5 pt-6 pb-4">
-        <p className="text-white/50 italic text-sm">{onboarding.first_name ?? "Toi"}, voilà ce qui arrive</p>
-        <h1 className="font-display font-black text-3xl text-white">Échéances</h1>
+        <p className="text-white/50 italic text-sm">{t("deadlines.greeting", { name: onboarding.first_name ?? "" })}</p>
+        <h1 className="font-display font-black text-3xl text-white">{t("deadlines.title")}</h1>
       </header>
 
       <section className="px-5 space-y-3 mb-6">
         {[...DEADLINES].sort((a, b) => a.date.localeCompare(b.date)).map((d) => {
-          const t = buildingThemes[d.buildingId];
+          const theme = buildingThemes[d.buildingId];
           const date = new Date(d.date);
-          const day = date.toLocaleDateString("fr-FR", { day: "2-digit" });
-          const m = date.toLocaleDateString("fr-FR", { month: "short" });
+          const day = date.toLocaleDateString(locale, { day: "2-digit" });
+          const m = date.toLocaleDateString(locale, { month: "short" });
           const isHL = highlight === d.date;
           return (
             <article key={d.date + d.title} className="rounded-2xl p-4 flex items-center gap-4 transition-all"
               style={{
-                background: isHL ? `${t.color}33` : "var(--bg-surface)",
-                borderLeft: `4px solid ${t.color}`,
+                background: isHL ? `${theme.color}33` : "var(--bg-surface)",
+                borderLeft: `4px solid ${theme.color}`,
                 transform: isHL ? "scale(1.02)" : "scale(1)",
               }}>
               <div className="text-center w-14 shrink-0">
-                <p className="font-display font-black text-2xl" style={{ color: t.color }}>{day}</p>
+                <p className="font-display font-black text-2xl" style={{ color: theme.color }}>{day}</p>
                 <p className="text-white/50 text-xs uppercase font-label">{m}</p>
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-display font-bold text-white">{d.title}</p>
-                <p className="text-white/40 italic text-xs">{t.name}</p>
+                <p className="text-white/40 italic text-xs">{theme.name}</p>
               </div>
               <div className="px-2 py-1 rounded-full text-[10px] font-label font-bold uppercase"
                 style={{ background: urgencyColor(d.urgency), color: "#fff" }}>
-                {d.urgency === "high" ? "Urgent" : d.urgency === "med" ? "Bientôt" : "OK"}
+                {d.urgency === "high" ? t("deadlines.urgent") : d.urgency === "med" ? t("deadlines.soon") : t("deadlines.ok")}
               </div>
             </article>
           );
@@ -90,15 +91,18 @@ function Deadlines() {
         <div className="flex items-center justify-between mb-3">
           <button onClick={() => setCursor(new Date(year, month - 1, 1))}
             className="w-9 h-9 rounded-full bg-[#2C2C2E] text-white flex items-center justify-center">←</button>
-          <p className="font-display font-bold text-white">{FR_MONTHS[month]} {year}</p>
+          <p className="font-display font-bold text-white">{new Date(year, month, 1).toLocaleDateString(locale, { month: "long", year: "numeric" })}</p>
           <button onClick={() => setCursor(new Date(year, month + 1, 1))}
             className="w-9 h-9 rounded-full bg-[#2C2C2E] text-white flex items-center justify-center">→</button>
         </div>
 
         <div className="grid grid-cols-7 gap-1 mb-2">
-          {FR_DAYS.map((d, i) => (
-            <div key={i} className="text-center text-[10px] uppercase tracking-wider text-white/40 font-label py-1">{d}</div>
-          ))}
+          {Array.from({ length: 7 }, (_, i) => {
+            const d = new Date(2025, 0, 6 + i); // Jan 6 2025 = Monday
+            return <div key={i} className="text-center text-[10px] uppercase tracking-wider text-white/40 font-label py-1">
+              {d.toLocaleDateString(locale, { weekday: "short" }).slice(0, 1).toUpperCase()}
+            </div>;
+          })}
         </div>
 
         <div className="grid grid-cols-7 gap-1">
@@ -107,7 +111,7 @@ function Deadlines() {
             const ds = deadlinesByDay(d);
             const has = ds.length > 0;
             const main = ds[0];
-            const t = main ? buildingThemes[main.buildingId] : null;
+            const calTheme = main ? buildingThemes[main.buildingId] : null;
             return (
               <button
                 key={i}
@@ -115,8 +119,8 @@ function Deadlines() {
                 onClick={() => has && main && setHighlight(highlight === main.date ? null : main.date)}
                 className="aspect-square rounded-xl flex flex-col items-center justify-center text-xs font-label relative transition-all"
                 style={{
-                  background: has ? `${t!.color}26` : "transparent",
-                  border: has ? `1.5px solid ${t!.color}` : "1px solid rgba(255,255,255,0.04)",
+                  background: has ? `${calTheme!.color}26` : "transparent",
+                  border: has ? `1.5px solid ${calTheme!.color}` : "1px solid rgba(255,255,255,0.04)",
                   color: has ? "#fff" : "rgba(255,255,255,0.5)",
                 }}
               >
@@ -133,7 +137,7 @@ function Deadlines() {
             );
           })}
         </div>
-        <p className="text-white/40 italic text-[10px] mt-3 text-center">Tap un jour avec point pour voir l'échéance ↑</p>
+        <p className="text-white/40 italic text-[10px] mt-3 text-center">{t("deadlines.tap_hint")}</p>
       </section>
 
       <BottomNav />

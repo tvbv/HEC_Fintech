@@ -5,11 +5,13 @@ import { useApp } from "@/lib/store";
 import { sendChat } from "@/lib/api";
 import { CleoCharacter } from "./CleoCharacter";
 import { CloseIcon } from "./icons";
+import { useTranslation } from "react-i18next";
 
 const HIDDEN_ROUTES = ["/", "/onboarding", "/generating"];
 
 export function CleoChat() {
   const loc = useLocation();
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -27,7 +29,7 @@ export function CleoChat() {
     if (!text || loading) return;
 
     if (!profileId) {
-      appendChat({ role: "assistant", content: "Termine d'abord l'onboarding pour que je puisse personnaliser mes réponses !", ts: Date.now() });
+      appendChat({ role: "assistant", content: t("chat.no_profile"), ts: Date.now() });
       return;
     }
 
@@ -39,7 +41,7 @@ export function CleoChat() {
       const res = await sendChat(profileId, text, history);
       appendChat({ role: "assistant", content: res.reply, ts: Date.now() });
     } catch {
-      appendChat({ role: "assistant", content: "Oups, j'ai eu un souci réseau. Réessaie dans un instant.", ts: Date.now() });
+      appendChat({ role: "assistant", content: t("chat.network_error"), ts: Date.now() });
     } finally {
       setLoading(false);
     }
@@ -64,8 +66,8 @@ export function CleoChat() {
             <header className="flex items-center gap-3 p-4 border-b border-white/5">
               <CleoCharacter state="TALKING" size={38} />
               <div className="flex-1">
-                <p className="font-display font-bold text-white">Cléo</p>
-                <p className="text-white/40 italic text-xs">Ta concierge IA</p>
+                <p className="font-display font-bold text-white">{t("chat.title")}</p>
+                <p className="text-white/40 italic text-xs">{t("chat.subtitle")}</p>
               </div>
               <button onClick={() => setOpen(false)} className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center text-white">
                 <CloseIcon size={18} />
@@ -74,9 +76,11 @@ export function CleoChat() {
             <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
               {chatMessages.length === 0 && (
                 <div className="text-center py-8">
-                  <p className="text-white/60 italic text-sm mb-4">Salut {onboarding.first_name ?? "toi"} 👋<br/>Demande-moi n'importe quoi sur ton installation en France.</p>
+                  <p className="text-white/60 italic text-sm mb-4" style={{ whiteSpace: "pre-line" }}>
+                    {t("chat.welcome", { name: onboarding.first_name ?? "👋" })}
+                  </p>
                   <div className="flex flex-wrap gap-2 justify-center">
-                    {["Comment avoir un RIB ?", "C'est quoi le SPI ?", "J'ai droit aux APL ?"].map((q) => (
+                    {[t("chat.q1"), t("chat.q2"), t("chat.q3")].map((q) => (
                       <button key={q} onClick={() => setInput(q)} className="px-3 py-1.5 rounded-full text-xs bg-white/10 text-white">{q}</button>
                     ))}
                   </div>
@@ -110,7 +114,7 @@ export function CleoChat() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && send()}
-                placeholder="Écris à Cléo…"
+                placeholder={t("chat.placeholder")}
                 className="flex-1 bg-[#0A0A0A] rounded-full px-4 py-3 text-white placeholder:text-white/30 outline-none text-sm"
                 maxLength={500}
               />
@@ -120,7 +124,7 @@ export function CleoChat() {
                 className="px-5 rounded-full font-label font-semibold text-sm disabled:opacity-40"
                 style={{ background: "var(--lemon)", color: "#000" }}
               >
-                Envoyer
+                {t("chat.send")}
               </button>
             </div>
           </div>

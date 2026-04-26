@@ -1,15 +1,18 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import { HomeIcon, ChartIcon, CalendarIcon, UserIcon } from "./icons";
-
-const items = [
-  { to: "/city", label: "Ma Ville", icon: HomeIcon },
-  { to: "/dashboard", label: "Dashboard", icon: ChartIcon },
-  { to: "/deadlines", label: "Échéances", icon: CalendarIcon },
-  { to: "/profile", label: "Profil", icon: UserIcon },
-] as const;
+import { useTranslation } from "react-i18next";
 
 export function BottomNav() {
   const loc = useLocation();
+  const { t } = useTranslation();
+
+  const items = [
+    { to: "/city", label: t("nav.city"), icon: HomeIcon },
+    { to: "/dashboard", label: t("nav.dashboard"), icon: ChartIcon },
+    { to: "/deadlines", label: t("nav.deadlines"), icon: CalendarIcon },
+    { to: "/profile", label: t("nav.profile"), icon: UserIcon },
+  ] as const;
+
   return (
     <nav className="fixed bottom-0 inset-x-0 z-40 bg-[#0A0A0A]/90 backdrop-blur-lg border-t border-white/5">
       <div className="max-w-md mx-auto flex items-center justify-around px-2 py-2 pb-[env(safe-area-inset-bottom)]">

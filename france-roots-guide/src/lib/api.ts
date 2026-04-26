@@ -23,6 +23,16 @@ const TIME_MAP: Record<string, string> = {
 };
 
 const ALREADY_MAP: Record<string, string> = {
+  // Internal IDs (new — pass through to backend code)
+  "id_card": "id_card",
+  "passport": "passport",
+  "visa": "visa",
+  "residence_permit": "residence_permit",
+  "proof_of_address": "proof_of_address",
+  "local_bank_account": "local_bank_account",
+  "tax_number": "tax_number",
+  "employer_certificate": "employer_certificate",
+  // Legacy French labels (backward compat)
   "Titre de séjour": "residence_permit",
   "Justificatif de domicile": "proof_of_address",
   "RIB français": "local_bank_account",

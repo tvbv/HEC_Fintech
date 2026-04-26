@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useApp } from "@/lib/store";
 import { fetchBankRecommendations, getBankRecommendations, STATIC_BANK_RECOS } from "@/lib/api";
 import type { Recommendation } from "@/lib/buildings";
@@ -25,11 +26,12 @@ const VALID: BuildingId[] = ["bank", "taxes", "housing", "insurance", "transport
 function BuildingScreen() {
   const { id } = useParams({ from: "/building/$id" });
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const buildingId = id as BuildingId;
   if (!VALID.includes(buildingId)) {
     return (
       <div className="min-h-screen flex items-center justify-center text-white">
-        <button onClick={() => navigate({ to: "/city" })} className="underline">Retour</button>
+        <button onClick={() => navigate({ to: "/city" })} className="underline">{t("common.back")}</button>
       </div>
     );
   }
@@ -91,7 +93,7 @@ function BuildingScreen() {
 
       {/* B - story cards */}
       <section className="px-5 mb-8 space-y-3">
-        <h2 className="font-display font-bold text-white text-xl mb-3">Ce qu'il faut savoir</h2>
+        <h2 className="font-display font-bold text-white text-xl mb-3">{t("building.what_to_know")}</h2>
         {content.story.map((s, i) => (
           <article
             key={i}
@@ -122,14 +124,14 @@ function BuildingScreen() {
         <div className="rounded-3xl p-6 bg-[#1C1C1E] text-center">
           {!scanned && !scanning && (
             <>
-              <p className="font-display font-bold text-white text-lg mb-2">Trouve tes meilleurs choix</p>
-              <p className="text-white/50 italic text-sm mb-4">Notre IA scanne {content.brands.length} options pour toi.</p>
+              <p className="font-display font-bold text-white text-lg mb-2">{t("building.find_best")}</p>
+              <p className="text-white/50 italic text-sm mb-4">{t("building.ai_scanning", { count: content.brands.length })}</p>
               <button
                 onClick={startScan}
                 className="px-6 py-3 rounded-2xl font-label font-semibold"
                 style={{ background: theme.color, color: theme.textColor }}
               >
-                Lancer l'analyse
+                {t("building.launch_analysis")}
               </button>
             </>
           )}
@@ -156,13 +158,13 @@ function BuildingScreen() {
                   <CleoCharacter state="THINKING" size={48} />
                 </div>
               </div>
-              <p className="text-white/70 italic text-sm">Analyse en cours…</p>
+              <p className="text-white/70 italic text-sm">{t("building.analyzing")}</p>
             </div>
           )}
           {scanned && (
             <div className="flex flex-col items-center gap-3 animate-fade-in">
               <p className="font-display font-bold text-xl" style={{ color: theme.color }}>
-                ✨ Tes meilleurs choix ↓
+                {t("building.best_choices")}
               </p>
               <ComparatorButton recos={recos} brands={content.brands} themeColor={theme.color} />
             </div>
@@ -208,7 +210,7 @@ function BuildingScreen() {
                 ))}
               </div>
               <div className="mt-3 inline-block px-4 py-2 rounded-xl text-sm font-label font-semibold" style={{ background: "var(--lemon)", color: "#000" }}>
-                Choisir →
+                {t("building.choose")}
               </div>
             </a>
           ))}
@@ -218,7 +220,7 @@ function BuildingScreen() {
       {/* E - guide */}
       {scanned && (
         <section className="px-5 mb-8 animate-fade-in">
-          <h2 className="font-display font-bold text-white text-xl mb-3">Étape par étape</h2>
+          <h2 className="font-display font-bold text-white text-xl mb-3">{t("building.step_by_step")}</h2>
           <div className="space-y-2">
             {content.guide.map((g, i) => {
               const stepId = `step-${i}`;
@@ -258,7 +260,7 @@ function BuildingScreen() {
       {/* F - tracker */}
       {scanned && (
         <section className="px-5 mb-8 animate-fade-in">
-          <h2 className="font-display font-bold text-white text-xl mb-4">Ta progression</h2>
+          <h2 className="font-display font-bold text-white text-xl mb-4">{t("building.progression")}</h2>
           <div className="flex items-center justify-between">
             {content.trackerNodes.map((n, i) => {
               const reached = checked.includes(`step-${i}`);
@@ -299,7 +301,7 @@ function BuildingScreen() {
               color: isDone ? "rgba(255,255,255,0.4)" : "#000",
             }}
           >
-            {isDone ? "✓ Déjà complété" : "Marquer comme complété 🎉"}
+            {isDone ? t("building.already_done") : t("building.mark_done")}
           </button>
         </section>
       )}

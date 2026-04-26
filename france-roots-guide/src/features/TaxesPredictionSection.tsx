@@ -1,13 +1,12 @@
 import { useApp } from "@/lib/store";
 import { CountUp } from "@/components/CountUp";
+import { useTranslation } from "react-i18next";
 
-const FR_MONTHS = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
-
-function lastNMonths(n: number): string[] {
+function lastNMonths(n: number, locale: string): string[] {
   const out: string[] = []; const now = new Date();
   for (let i = 0; i < n; i++) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    out.push(`${FR_MONTHS[d.getMonth()]} ${d.getFullYear()}`);
+    out.push(d.toLocaleDateString(locale, { month: "long", year: "numeric" }));
   }
   return out;
 }
@@ -45,8 +44,10 @@ const STEPS = [
 ];
 
 export function TaxesPredictionSection() {
+  const { t, i18n } = useTranslation();
   const { payslips } = useApp();
-  const months = lastNMonths(12);
+  const locale = i18n.language === "en" ? "en-GB" : "fr-FR";
+  const months = lastNMonths(12, locale);
   const uploaded = months.map((m) => payslips[m]).filter((p) => p?.uploaded);
   const monthsCount = uploaded.length;
   const avgNet = monthsCount ? uploaded.reduce((s, p) => s + (p?.net ?? 0), 0) / monthsCount : 0;
@@ -55,31 +56,31 @@ export function TaxesPredictionSection() {
 
   return (
     <section className="px-5 mb-8">
-      <h2 className="font-display font-bold text-white text-xl mb-1">Ta projection impôts</h2>
+      <h2 className="font-display font-bold text-white text-xl mb-1">{t("taxes_prediction.title")}</h2>
       <p className="text-white/50 italic text-sm mb-4">
-        {monthsCount > 0 ? `Basée sur ${monthsCount} bulletin(s) uploadé(s).` : "Upload tes bulletins dans Travail pour activer la projection."}
+        {monthsCount > 0 ? t("taxes_prediction.subtitle_data", { count: monthsCount }) : t("taxes_prediction.subtitle_empty")}
       </p>
 
       <div className="grid grid-cols-2 gap-3 mb-4">
         <div className="rounded-2xl p-4" style={{ background: "var(--lilac)" }}>
-          <p className="text-black/60 text-[10px] uppercase tracking-wider font-label">Revenu annuel</p>
+          <p className="text-black/60 text-[10px] uppercase tracking-wider font-label">{t("taxes_prediction.annual_income")}</p>
           <p className="font-display font-black text-black text-2xl">€<CountUp to={annualNet} /></p>
         </div>
         <div className="rounded-2xl p-4" style={{ background: "var(--vivid-orange)" }}>
-          <p className="text-white/80 text-[10px] uppercase tracking-wider font-label">Impôt estimé</p>
+          <p className="text-white/80 text-[10px] uppercase tracking-wider font-label">{t("taxes_prediction.estimated_tax")}</p>
           <p className="font-display font-black text-white text-2xl">€<CountUp to={tax} /></p>
         </div>
         <div className="rounded-2xl p-4 bg-[#1C1C1E]">
-          <p className="text-white/50 text-[10px] uppercase tracking-wider font-label">Taux moyen</p>
+          <p className="text-white/50 text-[10px] uppercase tracking-wider font-label">{t("taxes_prediction.avg_rate")}</p>
           <p className="font-display font-black text-white text-2xl">{(avgRate * 100).toFixed(1)}%</p>
         </div>
         <div className="rounded-2xl p-4 bg-[#1C1C1E]">
-          <p className="text-white/50 text-[10px] uppercase tracking-wider font-label">Taux marginal</p>
+          <p className="text-white/50 text-[10px] uppercase tracking-wider font-label">{t("taxes_prediction.marginal_rate")}</p>
           <p className="font-display font-black text-white text-2xl">{(marginal * 100).toFixed(0)}%</p>
         </div>
       </div>
 
-      <h3 className="font-display font-bold text-white mb-2 mt-6">Étapes officielles</h3>
+      <h3 className="font-display font-bold text-white mb-2 mt-6">{t("taxes_prediction.official_steps")}</h3>
       <div className="space-y-2">
         {STEPS.map((s, i) => (
           <div key={i} className="rounded-2xl p-4 bg-[#1C1C1E] flex items-start gap-3">

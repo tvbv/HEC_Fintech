@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AmbientGlobe } from "@/components/AmbientGlobe";
 import { CleoCharacter } from "@/components/CleoCharacter";
+import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -17,6 +18,7 @@ export const Route = createFileRoute("/")({
 
 function Splash() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [phase, setPhase] = useState(0);
   const [letters, setLetters] = useState(0);
 
@@ -85,7 +87,7 @@ function Splash() {
         )}
 
         <p className={`text-white/60 text-center font-body italic max-w-xs transition-opacity duration-700 ${phase >= 4 ? "opacity-100" : "opacity-0"}`}>
-          Ta ville sur-mesure pour t'installer en France.
+          {t("splash.tagline")}
         </p>
 
         {phase >= 4 && (
@@ -94,7 +96,7 @@ function Splash() {
             className="animate-pulse-glow font-label font-semibold px-8 py-4 rounded-2xl text-base"
             style={{ background: "var(--lemon)", color: "#000" }}
           >
-            Commencer →
+            {t("splash.cta")}
           </button>
         )}
       </div>

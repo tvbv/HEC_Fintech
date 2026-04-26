@@ -6,6 +6,7 @@ import { CountUp } from "@/components/CountUp";
 import { BottomNav } from "@/components/BottomNav";
 import { BuildingIcon } from "@/components/BuildingIcon";
 import { LockIcon, CheckIcon } from "@/components/icons";
+import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard — Concierge" }] }),
@@ -14,12 +15,13 @@ export const Route = createFileRoute("/dashboard")({
 
 const SPARKLINE = [2200, 2100, 2300, 2150, 2450, 2380, 2600, 2700, 2950, 3100, 3300, 3450];
 
-const EXPENSES = [
-  { label: "Loyer", value: 850, color: "var(--vivid-orange)" },
-  { label: "Courses", value: 420, color: "var(--vivid-green)" },
-  { label: "Transport", value: 84, color: "var(--vivid-purple)" },
-  { label: "Loisirs", value: 210, color: "var(--lilac)" },
-  { label: "Énergie", value: 95, color: "var(--lemon)" },
+// Expense labels are defined inside Dashboard to support i18n
+const EXPENSE_DATA = [
+  { key: "Rent", value: 850, color: "var(--vivid-orange)" },
+  { key: "Groceries", value: 420, color: "var(--vivid-green)" },
+  { key: "Transport", value: 84, color: "var(--vivid-purple)" },
+  { key: "Leisure", value: 210, color: "var(--lilac)" },
+  { key: "Energy", value: 95, color: "var(--lemon)" },
 ];
 
 function Sparkline({ data, w = 320, h = 60, color = "url(#sparkGrad)" }: { data: number[]; w?: number; h?: number; color?: string }) {
@@ -52,10 +54,11 @@ function Donut({ revenus, depenses, epargne }: { revenus: number; depenses: numb
   const total = revenus + depenses + epargne;
   const r = 60; const c = 2 * Math.PI * r;
   const seg = (val: number) => (val / total) * c;
+  const { t } = useTranslation();
   const segs = [
-    { v: revenus, color: "var(--vivid-green)", label: "Revenus" },
-    { v: depenses, color: "var(--vivid-orange)", label: "Dépenses" },
-    { v: epargne, color: "var(--vivid-purple)", label: "Épargne" },
+    { v: revenus, color: "var(--vivid-green)", label: t("dashboard.income") },
+    { v: depenses, color: "var(--vivid-orange)", label: t("dashboard.expenses") },
+    { v: epargne, color: "var(--vivid-purple)", label: t("dashboard.savings") },
   ];
   let offset = 0;
   return (
@@ -125,22 +128,29 @@ function XPRing({ xp }: { xp: number }) {
 }
 
 function Dashboard() {
+  const { t } = useTranslation();
   const { onboarding, completedBuildings, xp, biberons, userBenefits } = useApp();
   const totalSavings = biberons.reduce((s, b) => s + b.savings, 0);
   const benefitsTotal = userBenefits.reduce((s, b) => s + b.monthly_value, 0);
 
+  const EXPENSES = EXPENSE_DATA.map((d) => ({
+    label: t(`dashboard.expense_${d.key.toLowerCase()}` as any, d.key),
+    value: d.value,
+    color: d.color,
+  }));
+
   return (
     <main className="min-h-screen pb-28 bg-[#0A0A0A]">
       <header className="px-5 pt-6 pb-4">
-        <p className="text-white/50 italic text-sm">Bonjour {onboarding.first_name ?? "toi"}</p>
-        <h1 className="font-display font-black text-3xl text-white">Dashboard</h1>
+        <p className="text-white/50 italic text-sm">{t("dashboard.hello", { name: onboarding.first_name ?? "" })}</p>
+        <h1 className="font-display font-black text-3xl text-white">{t("dashboard.title")}</h1>
       </header>
 
-      {/* Hero solde + sparkline */}
+      {/* Hero balance + sparkline */}
       <section className="mx-5 rounded-3xl p-6 mb-4 animate-fade-in" style={{ background: "var(--vivid-purple)" }}>
-        <p className="text-white/70 text-xs uppercase tracking-wider font-label">Solde tous comptes</p>
+        <p className="text-white/70 text-xs uppercase tracking-wider font-label">{t("dashboard.balance")}</p>
         <p className="font-display font-black text-white text-5xl mt-1">€<CountUp to={3450 + totalSavings} /></p>
-        <p className="text-white/60 text-xs italic mt-1">📈 +12% ce mois</p>
+        <p className="text-white/60 text-xs italic mt-1">{t("dashboard.growth")}</p>
         <div className="mt-3 -mx-2">
           <Sparkline data={SPARKLINE} />
         </div>
@@ -149,30 +159,30 @@ function Dashboard() {
       {/* Donut + XP ring */}
       <section className="mx-5 grid grid-cols-1 gap-3 mb-4">
         <div className="rounded-2xl p-5 bg-[#1C1C1E] animate-fade-in">
-          <p className="font-display font-bold text-white mb-3">Répartition mensuelle</p>
+          <p className="font-display font-bold text-white mb-3">{t("dashboard.monthly_split")}</p>
           <Donut revenus={2400} depenses={1850} epargne={450} />
         </div>
         <div className="rounded-2xl p-5 bg-[#1C1C1E] flex items-center gap-4 animate-fade-in">
           <XPRing xp={xp} />
           <div className="flex-1">
-            <p className="font-display font-bold text-white">Niveau Explorer</p>
-            <p className="text-white/50 italic text-xs">Continue à débloquer des bâtiments pour monter en niveau.</p>
+            <p className="font-display font-bold text-white">{t("dashboard.level")}</p>
+            <p className="text-white/50 italic text-xs">{t("dashboard.level_hint")}</p>
           </div>
         </div>
       </section>
 
-      {/* Bar chart dépenses */}
+      {/* Bar chart expenses */}
       <section className="mx-5 rounded-2xl p-5 bg-[#1C1C1E] mb-4 animate-fade-in">
-        <p className="font-display font-bold text-white mb-3">Dépenses par catégorie</p>
+        <p className="font-display font-bold text-white mb-3">{t("dashboard.expenses_category")}</p>
         <Bars data={EXPENSES} />
       </section>
 
-      {/* Avantages actifs */}
+      {/* Active benefits */}
       <section className="mx-5 rounded-2xl p-5 mb-4 animate-fade-in" style={{ background: "linear-gradient(135deg, var(--lemon) 0%, #fff8a1 100%)", color: "#000" }}>
-        <p className="font-display font-bold mb-1">Mes avantages actifs</p>
-        <p className="italic text-xs opacity-70 mb-3">Tu économises €{benefitsTotal}/mois</p>
+        <p className="font-display font-bold mb-1">{t("dashboard.active_benefits")}</p>
+        <p className="italic text-xs opacity-70 mb-3">{t("dashboard.saving_monthly", { total: benefitsTotal })}</p>
         {userBenefits.length === 0 ? (
-          <p className="italic text-xs opacity-60">Active des aides depuis la ville → bâtiment Aides 🎁</p>
+          <p className="italic text-xs opacity-60">{t("dashboard.no_benefits")}</p>
         ) : (
           <div className="flex flex-wrap gap-2">
             {userBenefits.map((b) => (
@@ -186,27 +196,27 @@ function Dashboard() {
 
       {/* Timeline progression */}
       <section className="mx-5 mb-4">
-        <h2 className="font-display font-bold text-white text-lg mb-3">Progression</h2>
+        <h2 className="font-display font-bold text-white text-lg mb-3">{t("dashboard.progression")}</h2>
         <div className="rounded-2xl p-4 bg-[#1C1C1E] overflow-x-auto">
           <div className="relative flex items-center gap-3 min-w-max pb-1">
             {/* ligne pointillée derrière */}
             <div className="absolute left-6 right-6 top-6 h-0.5 -z-0"
               style={{ backgroundImage: "repeating-linear-gradient(to right, rgba(255,255,255,0.2) 0 6px, transparent 6px 12px)" }} />
             {buildingOrder.map((id) => {
-              const t = buildingThemes[id];
+              const theme = buildingThemes[id];
               const done = completedBuildings.includes(id);
               return (
                 <div key={id} className="relative z-10 flex flex-col items-center gap-1.5 w-16">
                   <div className="w-12 h-12 rounded-full flex items-center justify-center transition-all"
                     style={{
-                      background: done ? t.color : "var(--bg-elevated)",
-                      color: done ? t.textColor : "rgba(255,255,255,0.4)",
-                      boxShadow: done ? `0 0 12px ${t.color}55` : "none",
+                      background: done ? theme.color : "var(--bg-elevated)",
+                      color: done ? theme.textColor : "rgba(255,255,255,0.4)",
+                      boxShadow: done ? `0 0 12px ${theme.color}55` : "none",
                     }}>
                     {done ? <CheckIcon size={16} /> : <BuildingIcon id={id} size={18} />}
                   </div>
                   <span className="text-[9px] font-label text-center" style={{ color: done ? "#fff" : "rgba(255,255,255,0.4)" }}>
-                    {t.name}
+                    {theme.name}
                   </span>
                   {!done && id !== "airport" && (
                     <span className="absolute top-0 right-1 text-white/30">
@@ -223,8 +233,8 @@ function Dashboard() {
       <section className="mx-5 rounded-2xl p-4 bg-[#1C1C1E] flex gap-3" style={{ borderLeft: "4px solid var(--lemon)" }}>
         <CleoCharacter state="TALKING" size={42} />
         <div className="flex-1">
-          <p className="font-label font-semibold text-white text-sm mb-1">Suggestion du jour</p>
-          <p className="text-white/60 italic text-xs">Tu pourrais économiser €40/mois en activant le Forfait Mobilités Durables avec ton employeur.</p>
+          <p className="font-label font-semibold text-white text-sm mb-1">{t("dashboard.daily_tip")}</p>
+          <p className="text-white/60 italic text-xs">{t("dashboard.daily_tip_text")}</p>
         </div>
       </section>
 

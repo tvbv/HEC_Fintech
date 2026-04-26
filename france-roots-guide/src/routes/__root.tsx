@@ -1,4 +1,8 @@
 import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
+import "@/lib/i18n";
+import { I18nextProvider } from "react-i18next";
+import i18n, { setLanguage, getLanguage } from "@/lib/i18n";
+import { useState } from "react";
 
 import appCss from "../styles.css?url";
 
@@ -65,10 +69,31 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   return (
-    <>
+    <I18nextProvider i18n={i18n}>
       <Outlet />
       <CleoChatLazy />
-    </>
+      <LanguageToggle />
+    </I18nextProvider>
+  );
+}
+
+function LanguageToggle() {
+  const [lang, setLang] = useState<"fr" | "en">(getLanguage());
+  const toggle = () => {
+    const next = lang === "fr" ? "en" : "fr";
+    setLanguage(next);
+    setLang(next);
+  };
+  return (
+    <button
+      onClick={toggle}
+      title={lang === "fr" ? "Switch to English" : "Passer en français"}
+      className="fixed top-4 right-4 z-50 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold tracking-wide transition-all active:scale-95"
+      style={{ background: "rgba(255,255,255,0.1)", backdropFilter: "blur(12px)", color: "#fff", border: "1px solid rgba(255,255,255,0.2)" }}
+    >
+      <span style={{ fontSize: "1rem" }}>{lang === "fr" ? "🇬🇧" : "🇫🇷"}</span>
+      {lang === "fr" ? "EN" : "FR"}
+    </button>
   );
 }
 
