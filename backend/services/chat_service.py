@@ -7,6 +7,10 @@ Answers user questions using:
    degradation when TAVILY_API_KEY is not set)
 3. Cerebras llama3.1-8b to generate the final response
 
+The assistant is country-agnostic: it helps anyone moving from any origin
+country to any destination country navigate banking, administration, taxes,
+housing, healthcare, and daily life.
+
 The service maintains stateless request/response cycles; conversation history
 is passed in by the caller on each request.
 """
@@ -25,20 +29,29 @@ logger = logging.getLogger(__name__)
 _MAX_HISTORY = 10  # keep last N turns to avoid exceeding context window
 
 # ---------------------------------------------------------------------------
-# System prompt template
+# System prompt
 # ---------------------------------------------------------------------------
 
-_PERSONA = """Tu es Cleo, le concierge personnel de l'application France Roots.
-Tu aides les expatriés et étudiants étrangers à s'installer en France.
-Tu es chaleureux, concis et pratique. Tu réponds toujours en français sauf si
-l'utilisateur écrit dans une autre langue.
+_PERSONA = """\
+You are Cleo, a personal relocation concierge for expats and international students.
+Your role is to help anyone moving from one country to another navigate:
+- Banking and finance (opening accounts, transfers, credit history)
+- Administrative procedures (visas, residence permits, registrations)
+- Taxes and social contributions
+- Housing and utilities
+- Healthcare and insurance
+- Daily life practicalities
 
-Règles strictes :
-- Réponds uniquement à des questions liées à l'installation en France
-  (banque, admin, impôts, logement, santé, vie quotidienne).
-- Si une question est hors sujet, redirige poliment vers ton domaine.
-- Cite les sources web quand elles sont disponibles.
-- Ne fabricke jamais d'informations. Si tu n'es pas sûr, dis-le."""
+Core rules:
+- You are country-agnostic. You help with any origin → destination pair, worldwide.
+- Always reply in the same language the user writes in (French, English, Arabic, Spanish, etc.).
+- Personalise every answer using the user's profile (origin, destination, status, goals).
+- If web search results are available, use them and cite the source URLs.
+- If you are not sure about something, say so — never fabricate facts or figures.
+- Be concise, warm, and practical. Bullet points are welcome for step-by-step guides.
+- If the question is genuinely out of scope (e.g. medical diagnosis, legal advice requiring a lawyer),
+  acknowledge the limit and suggest seeking a professional.\
+"""
 
 
 def _build_system_prompt(profile: dict | None, web_context: str) -> str:
@@ -49,40 +62,52 @@ def _build_system_prompt(profile: dict | None, web_context: str) -> str:
     sections: list[str] = [_PERSONA]
 
     if profile:
+        origin = profile.get("country_of_residence") or "unknown"
+        destination = profile.get("country_moving_to") or "unknown"
         already = profile.get("already_has") or []
         goals = profile.get("goals") or []
+
         time_map = {
-            "just_arrived": "moins de 3 mois",
-            "settling_in": "3 à 12 mois",
-            "established": "plus d'un an",
+            "just_arrived": "less than 3 months",
+            "settling_in": "3–12 months",
+            "established": "more than a year",
         }
-        time_label = time_map.get(profile.get("time_in_france", ""), "durée inconnue")
+        time_label = time_map.get(profile.get("time_in_france", ""), "unknown duration")
+
+        income_info = (
+            f"yes ({profile.get('income_bracket', 'unspecified')})"
+            if profile.get("has_income")
+            else "no"
+        )
 
         sections.append(
             f"""
---- PROFIL DE L'UTILISATEUR ---
-Prénom : {profile.get("first_name", "inconnu")}
-Nationalité : {profile.get("nationality", "inconnue")}
-Statut professionnel : {profile.get("employment_status", "inconnu")}
-Revenus : {"oui (" + profile.get("income_bracket", "") + ")" if profile.get("has_income") else "non"}
-Pays d'origine : {profile.get("country_of_residence", "inconnu")}
-Depuis en France : {time_label}
-Liens financiers à l'étranger : {"oui" if profile.get("has_financial_ties_abroad") else "non"}
-Ce qu'il/elle possède déjà : {", ".join(already) if already else "rien de renseigné"}
-Objectifs : {", ".join(goals) if goals else "non renseignés"}
--------------------------------
+=== USER PROFILE ===
+Name            : {profile.get("first_name", "unknown")}
+Nationality     : {profile.get("nationality", "unknown")}
+Origin country  : {origin}
+Destination     : {destination}
+Employment      : {profile.get("employment_status", "unknown")}
+Has income      : {income_info}
+Time at destination: {time_label}
+Financial ties abroad: {"yes" if profile.get("has_financial_ties_abroad") else "no"}
+Already has     : {", ".join(already) if already else "nothing specified"}
+Goals           : {", ".join(goals) if goals else "not specified"}
+====================
 
-Adapte chaque réponse à cette situation spécifique."""
+Tailor every response to this person's specific origin–destination situation ({origin} → {destination}).\
+"""
         )
 
     if web_context:
         sections.append(
             f"""
---- INFORMATIONS WEB RÉCENTES ---
+=== LIVE WEB CONTEXT (from Tavily) ===
 {web_context}
----------------------------------
+======================================
 
-Utilise ces informations pour enrichir ta réponse et cite les URLs si pertinent."""
+Use this information to ground your answer in up-to-date facts. Cite URLs where relevant.\
+"""
         )
 
     return "\n".join(sections)
@@ -92,7 +117,35 @@ Utilise ces informations pour enrichir ta réponse et cite les URLs si pertinent
 # Tavily helper
 # ---------------------------------------------------------------------------
 
-def _tavily_search(query: str) -> str:
+
+def _build_tavily_query(message: str, profile: dict | None) -> str:
+    """
+    Enrich the user message with destination/origin context so that Tavily
+    returns highly relevant, country-specific results.
+
+    Example:
+        "comment ouvrir un compte bancaire" + profile(destination=France)
+        → "comment ouvrir un compte bancaire en France pour étudiant marocain"
+    """
+    if not profile:
+        return message
+
+    destination = profile.get("country_moving_to")
+    origin = profile.get("country_of_residence")
+    status = profile.get("employment_status")
+
+    parts: list[str] = [message]
+    if destination:
+        parts.append(f"in {destination}")
+    if origin:
+        parts.append(f"for someone from {origin}")
+    if status:
+        parts.append(f"({status})")
+
+    return " ".join(parts)
+
+
+def _tavily_search(query: str, profile: dict | None) -> str:
     """
     Search the web via Tavily and return a compact text summary.
 
@@ -104,22 +157,29 @@ def _tavily_search(query: str) -> str:
         return ""
 
     try:
-        from tavily import TavilyClient  # imported lazily to avoid import error if not installed
+        from tavily import TavilyClient  # lazy import — avoids crash if not installed
+
+        enriched_query = _build_tavily_query(query, profile)
+        logger.debug("Tavily query: %s", enriched_query)
 
         client = TavilyClient(api_key=api_key)
         results = client.search(
-            query=query,
+            query=enriched_query,
             search_depth="advanced",
-            max_results=3,
+            max_results=4,
             include_answer=True,
         )
 
         lines: list[str] = []
+
         if results.get("answer"):
-            lines.append(f"Résumé : {results['answer']}")
+            lines.append(f"Summary: {results['answer']}")
 
         for r in results.get("results", []):
-            lines.append(f"- {r.get('title', '')} : {r.get('content', '')[:300]} ({r.get('url', '')})")
+            title = r.get("title", "")
+            snippet = r.get("content", "")[:400]
+            url = r.get("url", "")
+            lines.append(f"• {title}: {snippet} ({url})")
 
         return "\n".join(lines)
 
@@ -134,7 +194,7 @@ def _tavily_search(query: str) -> str:
 
 
 class ChatService:
-    """Handles conversational AI responses with user context and web search."""
+    """Handles conversational AI responses with user context and live web search."""
 
     def respond(
         self,
@@ -146,8 +206,10 @@ class ChatService:
         Generate a personalised reply to the user's message.
 
         Args:
-            profile_id: ID of the user's profile in the database.
-            message:    The user's latest message.
+            profile_id: ID of the user's profile in the database. Used to
+                        inject origin/destination country, status, goals, etc.
+                        Pass 0 or any non-existent ID to chat without a profile.
+            message:    The user's latest message (any language).
             history:    Previous turns (user + assistant), oldest first.
 
         Returns:
@@ -155,21 +217,25 @@ class ChatService:
 
         Raises:
             RuntimeError: If CEREBRAS_API_KEY is not configured.
-            Exception:    Propagated Cerebras API errors.
         """
         api_key = os.environ.get("CEREBRAS_API_KEY")
         if not api_key:
             raise RuntimeError("CEREBRAS_API_KEY is not configured.")
 
-        # 1. Fetch user profile (best-effort — chat works without it)
+        # 1. Fetch user profile — best-effort, chat works without it
         profile: dict | None = None
-        try:
-            profile = profile_service.get_profile(profile_id)
-        except Exception:
-            logger.warning("Could not fetch profile %d — continuing without context.", profile_id, exc_info=True)
+        if profile_id and profile_id > 0:
+            try:
+                profile = profile_service.get_profile(profile_id)
+            except Exception:
+                logger.warning(
+                    "Could not fetch profile %d — continuing without context.",
+                    profile_id,
+                    exc_info=True,
+                )
 
-        # 2. Web search via Tavily (optional)
-        web_context = _tavily_search(message)
+        # 2. Web search via Tavily (optional, country-context enriched)
+        web_context = _tavily_search(message, profile)
 
         # 3. Build system prompt
         system_prompt = _build_system_prompt(profile, web_context)
@@ -177,7 +243,7 @@ class ChatService:
         # 4. Trim history to avoid context overflow
         trimmed = history[-_MAX_HISTORY:]
 
-        # 5. Build messages list for Cerebras
+        # 5. Build Cerebras messages list
         messages: list[dict] = [{"role": "system", "content": system_prompt}]
         for turn in trimmed:
             messages.append({"role": turn.role, "content": turn.content})
@@ -188,12 +254,16 @@ class ChatService:
         response = client.chat.completions.create(
             model="llama3.1-8b",
             messages=messages,
-            temperature=0.5,
-            max_tokens=800,
+            temperature=0.4,   # slightly lower for more factual answers
+            max_tokens=1024,   # more room for detailed, sourced answers
         )
 
-        reply = response.choices[0].message.content.strip()
-        logger.info("Chat reply generated for profile %d (%d chars).", profile_id, len(reply))
+        reply: str = response.choices[0].message.content.strip()
+        logger.info(
+            "Chat reply generated for profile %d (%d chars).",
+            profile_id,
+            len(reply),
+        )
         return reply
 
 
