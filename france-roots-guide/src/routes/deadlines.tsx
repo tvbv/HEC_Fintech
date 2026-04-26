@@ -10,15 +10,15 @@ export const Route = createFileRoute("/deadlines")({
   component: Deadlines,
 });
 
-interface Deadline { date: string; title: string; buildingId: BuildingId; urgency: "high" | "med" | "low" }
+interface Deadline { date: string; titleKey: string; buildingId: BuildingId; urgency: "high" | "med" | "low" }
 
 const DEADLINES: Deadline[] = [
-  { date: "2025-05-31", title: "Déclaration de revenus", buildingId: "taxes", urgency: "high" },
-  { date: "2025-06-15", title: "Renouvellement Navigo", buildingId: "transport", urgency: "low" },
-  { date: "2025-07-01", title: "Quittance loyer juillet", buildingId: "housing", urgency: "med" },
-  { date: "2025-09-01", title: "Inscription école", buildingId: "children", urgency: "med" },
-  { date: "2025-05-12", title: "Échéance assurance", buildingId: "insurance", urgency: "med" },
-  { date: "2025-05-25", title: "Versement CAF", buildingId: "aids", urgency: "low" },
+  { date: "2025-05-31", titleKey: "deadlines.dl_tax_return", buildingId: "taxes", urgency: "high" },
+  { date: "2025-06-15", titleKey: "deadlines.dl_navigo", buildingId: "transport", urgency: "low" },
+  { date: "2025-07-01", titleKey: "deadlines.dl_rent", buildingId: "housing", urgency: "med" },
+  { date: "2025-09-01", titleKey: "deadlines.dl_school", buildingId: "children", urgency: "med" },
+  { date: "2025-05-12", titleKey: "deadlines.dl_insurance", buildingId: "insurance", urgency: "med" },
+  { date: "2025-05-25", titleKey: "deadlines.dl_caf", buildingId: "aids", urgency: "low" },
 ];
 
 function Deadlines() {
@@ -74,8 +74,8 @@ function Deadlines() {
                 <p className="text-white/50 text-xs uppercase font-label">{m}</p>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-display font-bold text-white">{d.title}</p>
-                <p className="text-white/40 italic text-xs">{theme.name}</p>
+                <p className="font-display font-bold text-white">{t(d.titleKey as any)}</p>
+                <p className="text-white/40 italic text-xs">{t(`theme.${d.buildingId}` as any)}</p>
               </div>
               <div className="px-2 py-1 rounded-full text-[10px] font-label font-bold uppercase"
                 style={{ background: urgencyColor(d.urgency), color: "#fff" }}>

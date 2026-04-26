@@ -167,18 +167,24 @@ function mapApiRecoToReco(reco: ApiReco, index: number): Recommendation {
     ? `${reco.features_summary.monthly_fee_eur} €/mois`
     : "Voir site";
   const delay = reco.opening_time ?? "Variable";
-  const note = (reco.score * 5).toFixed(1);
+
+  // score may be 0-1 (probability) or 0-100 (percentage) — normalise to 0-5
+  const rawScore = reco.score ?? 0;
+  const score5 = rawScore > 5 ? rawScore / 20 : rawScore > 1 ? rawScore : rawScore * 5;
+  const rating = Math.min(5, Math.max(1, Math.round(score5 * 10) / 10));
+  const note = rating.toFixed(1);
 
   return {
     name: reco.name,
-    tagline: reco.reasons[0] ?? "Recommandé pour votre profil",
+    tagline: reco.reasons[0] ?? "Recommended for your profile",
+    tagline_en: reco.reasons[0] ?? "Recommended for your profile",
     url: reco.url,
-    rating: Math.round(reco.score * 5 * 10) / 10,
+    rating,
     badge: index === 0 ? "MEILLEUR MATCH" : undefined,
     metrics: [
-      { label: "Frais", value: fee },
-      { label: "Délai", value: delay },
-      { label: "Note", value: note },
+      { label: "Frais", label_en: "Fees", value: fee },
+      { label: "Délai", label_en: "Delay", value: delay },
+      { label: "Note", label_en: "Score", value: note },
     ],
   };
 }
@@ -212,37 +218,40 @@ async function callRecommendEndpoint(profile: UserProfile): Promise<Recommendati
 
 export const STATIC_BANK_RECOS: Recommendation[] = [
   {
-    name: "HSBC France",
-    tagline: "Réseau mondial — gestion de patrimoine pour expatriés premium",
-    url: "https://www.hsbc.fr/1/2/hsbc-france/particuliers/international",
-    rating: 4.0,
+    name: "Wise",
+    tagline: "Compte multi-devises — IBAN local dans 10+ pays, frais minimaux",
+    tagline_en: "Multi-currency account — local IBAN in 10+ countries, minimal fees",
+    url: "https://wise.com/fr",
+    rating: 4.8,
     badge: "MEILLEUR MATCH",
     metrics: [
-      { label: "Frais", value: "25 €/mois" },
-      { label: "Délai", value: "3-5 jours" },
-      { label: "IBAN", value: "FR76 ✓" },
+      { label: "Frais", label_en: "Fees", value: "0 €/mois" },
+      { label: "Délai", label_en: "Delay", value: "< 1 min" },
+      { label: "Note", label_en: "Score", value: "4.8" },
     ],
   },
   {
-    name: "Orange Bank",
-    tagline: "IBAN français sans frais — adossée à Société Générale",
-    url: "https://www.orangebank.fr",
-    rating: 3.5,
+    name: "Revolut",
+    tagline: "App ultra-simple — IBAN EU, taux de change interbancaire",
+    tagline_en: "Ultra-simple app — EU IBAN, interbank exchange rates",
+    url: "https://www.revolut.com/fr-FR",
+    rating: 4.6,
     metrics: [
-      { label: "Frais", value: "0 €/mois" },
-      { label: "Délai", value: "15 min en ligne" },
-      { label: "IBAN", value: "FR76 ✓" },
+      { label: "Frais", label_en: "Fees", value: "0 €/mois" },
+      { label: "Délai", label_en: "Delay", value: "< 5 min" },
+      { label: "Note", label_en: "Score", value: "4.6" },
     ],
   },
   {
-    name: "CIC Expat",
-    tagline: "Ouverture avant l'arrivée en France — IBAN FR dès le 1er jour",
-    url: "https://www.cic.fr/particuliers/international/expatries.html",
-    rating: 4.0,
+    name: "N26",
+    tagline: "Banque 100% mobile — IBAN DE/EU, support 24h en français",
+    tagline_en: "100% mobile bank — DE/EU IBAN, 24h support in English",
+    url: "https://n26.com/fr-fr",
+    rating: 4.4,
     metrics: [
-      { label: "Frais", value: "6 €/mois" },
-      { label: "Délai", value: "Depuis l'étranger" },
-      { label: "IBAN", value: "FR76 ✓" },
+      { label: "Frais", label_en: "Fees", value: "0 €/mois" },
+      { label: "Délai", label_en: "Delay", value: "8 min" },
+      { label: "Note", label_en: "Score", value: "4.4" },
     ],
   },
 ];

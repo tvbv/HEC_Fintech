@@ -151,7 +151,11 @@
     "no_benefits": "Activate benefits from the city → Aids building 🎁",
     "progression": "Progression",
     "daily_tip": "Today's tip",
-    "daily_tip_text": "You could save €40/month by activating the Sustainable Mobility Package with your employer."
+    "daily_tip_text": "You could save €40/month by activating the Sustainable Mobility Package with your employer.",
+    "avg_net_label": "Avg net / month",
+    "payslips_count": "payslip(s)",
+    "income_history": "Income history",
+    "no_payslips": "Upload your payslips in Work to see your income history here."
   },
   "deadlines": {
     "greeting": "{{name}}, here's what's coming up",
@@ -159,7 +163,25 @@
     "urgent": "Urgent",
     "soon": "Soon",
     "ok": "OK",
-    "tap_hint": "Tap a day with a dot to see the deadline ↑"
+    "tap_hint": "Tap a day with a dot to see the deadline ↑",
+    "dl_tax_return": "Tax return",
+    "dl_navigo": "Navigo renewal",
+    "dl_rent": "July rent payment",
+    "dl_school": "School enrolment",
+    "dl_insurance": "Insurance payment",
+    "dl_caf": "CAF payment"
+  },
+  "theme": {
+    "airport": "Airport",
+    "bank": "Bank",
+    "taxes": "Taxes",
+    "housing": "Housing",
+    "insurance": "Insurance",
+    "transport": "Transport",
+    "work": "Work",
+    "retirement": "Retirement",
+    "children": "Children",
+    "aids": "Benefits"
   },
   "profile": {
     "level": "Explorer Level",

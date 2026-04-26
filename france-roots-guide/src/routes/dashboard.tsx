@@ -13,16 +13,13 @@ export const Route = createFileRoute("/dashboard")({
   component: Dashboard,
 });
 
-const SPARKLINE = [2200, 2100, 2300, 2150, 2450, 2380, 2600, 2700, 2950, 3100, 3300, 3450];
-
-// Expense labels are defined inside Dashboard to support i18n
-const EXPENSE_DATA = [
-  { key: "Rent", value: 850, color: "var(--vivid-orange)" },
-  { key: "Groceries", value: 420, color: "var(--vivid-green)" },
-  { key: "Transport", value: 84, color: "var(--vivid-purple)" },
-  { key: "Leisure", value: 210, color: "var(--lilac)" },
-  { key: "Energy", value: 95, color: "var(--lemon)" },
-];
+const INCOME_BRACKET_MAP: Record<string, number> = {
+  "<1500": 1200,
+  "1500-2000": 1750,
+  "2000-3000": 2500,
+  "3000-5000": 4000,
+  "5000+": 6000,
+};
 
 function Sparkline({ data, w = 320, h = 60, color = "url(#sparkGrad)" }: { data: number[]; w?: number; h?: number; color?: string }) {
   const min = Math.min(...data); const max = Math.max(...data); const range = max - min || 1;
@@ -51,7 +48,7 @@ function Sparkline({ data, w = 320, h = 60, color = "url(#sparkGrad)" }: { data:
 }
 
 function Donut({ revenus, depenses, epargne }: { revenus: number; depenses: number; epargne: number }) {
-  const total = revenus + depenses + epargne;
+  const total = revenus + depenses + epargne || 1;
   const r = 60; const c = 2 * Math.PI * r;
   const seg = (val: number) => (val / total) * c;
   const { t } = useTranslation();
@@ -60,12 +57,13 @@ function Donut({ revenus, depenses, epargne }: { revenus: number; depenses: numb
     { v: depenses, color: "var(--vivid-orange)", label: t("dashboard.expenses") },
     { v: epargne, color: "var(--vivid-purple)", label: t("dashboard.savings") },
   ];
+  const hasData = revenus > 0 || epargne > 0;
   let offset = 0;
   return (
     <div className="flex items-center gap-5">
       <svg width={150} height={150} viewBox="0 0 150 150" className="-rotate-90">
         <circle cx="75" cy="75" r={r} fill="none" stroke="var(--bg-elevated)" strokeWidth="14" />
-        {segs.map((s, i) => {
+        {hasData ? segs.map((s, i) => {
           const len = seg(s.v);
           const el = (
             <circle key={i} cx="75" cy="75" r={r} fill="none" stroke={s.color} strokeWidth="14"
@@ -74,7 +72,7 @@ function Donut({ revenus, depenses, epargne }: { revenus: number; depenses: numb
           );
           offset += len;
           return el;
-        })}
+        }) : null}
       </svg>
       <div className="flex-1 space-y-2">
         {segs.map((s) => (
@@ -89,15 +87,19 @@ function Donut({ revenus, depenses, epargne }: { revenus: number; depenses: numb
   );
 }
 
-function Bars({ data }: { data: typeof EXPENSES }) {
-  const max = Math.max(...data.map((d) => d.value));
+interface PayslipBar { label: string; net: number; color: string }
+function PayslipBars({ data, noDataLabel }: { data: PayslipBar[]; noDataLabel: string }) {
+  const max = Math.max(...data.map((d) => d.net), 1);
+  if (data.length === 0) {
+    return <p className="text-white/40 italic text-sm text-center py-6">{noDataLabel}</p>;
+  }
   return (
     <div className="flex items-end justify-between gap-2 h-32 px-1">
       {data.map((d) => {
-        const h = (d.value / max) * 100;
+        const h = (d.net / max) * 100;
         return (
           <div key={d.label} className="flex flex-col items-center flex-1 gap-1">
-            <div className="text-[10px] font-bold text-white">€{d.value}</div>
+            <div className="text-[10px] font-bold text-white">€{d.net}</div>
             <div className="w-full rounded-t-md transition-all"
               style={{ height: `${h}%`, background: d.color, animation: "fade-in 0.6s ease-out both" }} />
             <div className="text-[10px] text-white/60 font-label truncate w-full text-center">{d.label}</div>
@@ -128,16 +130,41 @@ function XPRing({ xp }: { xp: number }) {
 }
 
 function Dashboard() {
-  const { t } = useTranslation();
-  const { onboarding, completedBuildings, xp, biberons, userBenefits } = useApp();
+  const { t, i18n } = useTranslation();
+  const { onboarding, completedBuildings, xp, biberons, userBenefits, payslips } = useApp();
+  const locale = i18n.language === "en" ? "en-GB" : "fr-FR";
+
+  // Real income from uploaded payslips
+  const uploadedPayslips = Object.entries(payslips).filter(([, p]) => p.uploaded && p.net);
+  const avgNet = uploadedPayslips.length > 0
+    ? Math.round(uploadedPayslips.reduce((s, [, p]) => s + (p.net ?? 0), 0) / uploadedPayslips.length)
+    : onboarding.has_income
+      ? (INCOME_BRACKET_MAP[onboarding.income_bracket ?? ""] ?? 0)
+      : 0;
+
+  // Expenses always 0 (no tracking yet)
+  const totalExpenses = 0;
+
+  // Savings = biberons savings total
   const totalSavings = biberons.reduce((s, b) => s + b.savings, 0);
   const benefitsTotal = userBenefits.reduce((s, b) => s + b.monthly_value, 0);
 
-  const EXPENSES = EXPENSE_DATA.map((d) => ({
-    label: t(`dashboard.expense_${d.key.toLowerCase()}` as any, d.key),
-    value: d.value,
-    color: d.color,
-  }));
+  // Payslip bar chart data (last 6 months)
+  const payslipBars: PayslipBar[] = uploadedPayslips
+    .slice(-6)
+    .map(([month, p], i) => ({
+      label: (() => {
+        const [y, m] = month.split("-");
+        return new Date(Number(y), Number(m) - 1, 1).toLocaleDateString(locale, { month: "short" });
+      })(),
+      net: p.net ?? 0,
+      color: i === uploadedPayslips.length - 1 ? "var(--lemon)" : "var(--vivid-purple)",
+    }));
+
+  // Sparkline from payslips or flat line
+  const sparklineData = uploadedPayslips.length >= 2
+    ? uploadedPayslips.slice(-12).map(([, p]) => p.net ?? 0)
+    : [avgNet, avgNet, avgNet, avgNet, avgNet, avgNet];
 
   return (
     <main className="min-h-screen pb-28 bg-[#0A0A0A]">
@@ -149,10 +176,14 @@ function Dashboard() {
       {/* Hero balance + sparkline */}
       <section className="mx-5 rounded-3xl p-6 mb-4 animate-fade-in" style={{ background: "var(--vivid-purple)" }}>
         <p className="text-white/70 text-xs uppercase tracking-wider font-label">{t("dashboard.balance")}</p>
-        <p className="font-display font-black text-white text-5xl mt-1">€<CountUp to={3450 + totalSavings} /></p>
-        <p className="text-white/60 text-xs italic mt-1">{t("dashboard.growth")}</p>
+        <p className="font-display font-black text-white text-5xl mt-1">€<CountUp to={avgNet + totalSavings} /></p>
+        {uploadedPayslips.length > 0 && (
+          <p className="text-white/60 text-xs italic mt-1">
+            {t("dashboard.avg_net_label")} · {uploadedPayslips.length} {t("dashboard.payslips_count")}
+          </p>
+        )}
         <div className="mt-3 -mx-2">
-          <Sparkline data={SPARKLINE} />
+          <Sparkline data={sparklineData} />
         </div>
       </section>
 
@@ -160,7 +191,7 @@ function Dashboard() {
       <section className="mx-5 grid grid-cols-1 gap-3 mb-4">
         <div className="rounded-2xl p-5 bg-[#1C1C1E] animate-fade-in">
           <p className="font-display font-bold text-white mb-3">{t("dashboard.monthly_split")}</p>
-          <Donut revenus={2400} depenses={1850} epargne={450} />
+          <Donut revenus={avgNet} depenses={totalExpenses} epargne={totalSavings} />
         </div>
         <div className="rounded-2xl p-5 bg-[#1C1C1E] flex items-center gap-4 animate-fade-in">
           <XPRing xp={xp} />
@@ -171,10 +202,10 @@ function Dashboard() {
         </div>
       </section>
 
-      {/* Bar chart expenses */}
+      {/* Payslip income timeline */}
       <section className="mx-5 rounded-2xl p-5 bg-[#1C1C1E] mb-4 animate-fade-in">
-        <p className="font-display font-bold text-white mb-3">{t("dashboard.expenses_category")}</p>
-        <Bars data={EXPENSES} />
+        <p className="font-display font-bold text-white mb-3">{t("dashboard.income_history")}</p>
+        <PayslipBars data={payslipBars} noDataLabel={t("dashboard.no_payslips")} />
       </section>
 
       {/* Active benefits */}

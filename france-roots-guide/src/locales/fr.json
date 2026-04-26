@@ -151,7 +151,11 @@
     "no_benefits": "Active des aides depuis la ville → bâtiment Aides 🎁",
     "progression": "Progression",
     "daily_tip": "Suggestion du jour",
-    "daily_tip_text": "Tu pourrais économiser €40/mois en activant le Forfait Mobilités Durables avec ton employeur."
+    "daily_tip_text": "Tu pourrais économiser €40/mois en activant le Forfait Mobilités Durables avec ton employeur.",
+    "avg_net_label": "Net moyen / mois",
+    "payslips_count": "bulletin(s)",
+    "income_history": "Historique revenus",
+    "no_payslips": "Upload tes bulletins dans Travail pour voir ton historique ici."
   },
   "deadlines": {
     "greeting": "{{name}}, voilà ce qui arrive",
@@ -159,7 +163,25 @@
     "urgent": "Urgent",
     "soon": "Bientôt",
     "ok": "OK",
-    "tap_hint": "Tap un jour avec point pour voir l'échéance ↑"
+    "tap_hint": "Tap un jour avec point pour voir l'échéance ↑",
+    "dl_tax_return": "Déclaration de revenus",
+    "dl_navigo": "Renouvellement Navigo",
+    "dl_rent": "Quittance loyer juillet",
+    "dl_school": "Inscription école",
+    "dl_insurance": "Échéance assurance",
+    "dl_caf": "Versement CAF"
+  },
+  "theme": {
+    "airport": "Aéroport",
+    "bank": "Banque",
+    "taxes": "Impôts",
+    "housing": "Logement",
+    "insurance": "Assurance",
+    "transport": "Transport",
+    "work": "Travail",
+    "retirement": "Retraite",
+    "children": "Enfants",
+    "aids": "Aides"
   },
   "profile": {
     "level": "Niveau Explorer",
