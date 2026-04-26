@@ -1,190 +1,142 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { motion } from "framer-motion";
-import { ArrowRight, Bell, Check } from "lucide-react";
-import { CCard, Pill } from "@/components/concierge/CCard";
-import { BottomNav } from "@/components/concierge/BottomNav";
-import { CleoBubble } from "@/components/concierge/Cleo";
+import { useApp } from "@/lib/store";
+import { buildingThemes, type BuildingId } from "@/lib/theme";
+import { BottomNav } from "@/components/BottomNav";
 
 export const Route = createFileRoute("/deadlines")({
+  head: () => ({ meta: [{ title: "Échéances — Concierge" }] }),
   component: Deadlines,
 });
 
-const FILTERS = ["All", "Urgent", "Tax", "Benefits", "Admin"] as const;
+interface Deadline { date: string; title: string; buildingId: BuildingId; urgency: "high" | "med" | "low" }
 
-const ITEMS = [
-  {
-    cat: "Tax" as const,
-    title: "Tax declaration (Form 2042)",
-    desc: "First-year paper declaration. Mail to Centre des Finances Publiques.",
-    days: 36,
-    urgency: "urgent" as const,
-    done: false,
-    href: "/level/taxes",
-  },
-  {
-    cat: "Benefits" as const,
-    title: "CAF housing renewal",
-    desc: "Confirm your income and address with CAF to keep monthly aid.",
-    days: 51,
-    urgency: "soon" as const,
-    done: false,
-    href: "/level/benefits",
-  },
-  {
-    cat: "Admin" as const,
-    title: "Carte de séjour renewal",
-    desc: "Apply 2 months before expiry on your local préfecture's site.",
-    days: 109,
-    urgency: "fine" as const,
-    done: false,
-    href: "/dashboard",
-  },
-  {
-    cat: "Admin" as const,
-    title: "Update RIB with employer",
-    desc: "Send your new French IBAN once your bank account is open.",
-    days: 14,
-    urgency: "urgent" as const,
-    done: true,
-    href: "/dashboard",
-  },
+const DEADLINES: Deadline[] = [
+  { date: "2025-05-31", title: "Déclaration de revenus", buildingId: "taxes", urgency: "high" },
+  { date: "2025-06-15", title: "Renouvellement Navigo", buildingId: "transport", urgency: "low" },
+  { date: "2025-07-01", title: "Quittance loyer juillet", buildingId: "housing", urgency: "med" },
+  { date: "2025-09-01", title: "Inscription école", buildingId: "children", urgency: "med" },
+  { date: "2025-05-12", title: "Échéance assurance", buildingId: "insurance", urgency: "med" },
+  { date: "2025-05-25", title: "Versement CAF", buildingId: "aids", urgency: "low" },
 ];
 
-const borderTone = {
-  urgent: "!border-l-coral-red",
-  soon: "!border-l-warn-yellow",
-  fine: "!border-l-lemon",
-} as const;
-
-const textTone = {
-  urgent: "text-coral-red",
-  soon: "text-warn-yellow",
-  fine: "text-lemon",
-} as const;
+const FR_MONTHS = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
+const FR_DAYS = ["L", "M", "M", "J", "V", "S", "D"];
 
 function Deadlines() {
-  const [filter, setFilter] = useState<(typeof FILTERS)[number]>("All");
-  const filtered = ITEMS.filter(
-    (i) =>
-      filter === "All" ||
-      i.cat === filter ||
-      (filter === "Urgent" && i.urgency === "urgent"),
-  );
+  const { onboarding } = useApp();
+  const [cursor, setCursor] = useState(() => new Date(2025, 4, 1)); // mai 2025 par défaut
+  const [highlight, setHighlight] = useState<string | null>(null);
+
+  const year = cursor.getFullYear();
+  const month = cursor.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const startOffset = (firstDay.getDay() + 6) % 7; // lundi = 0
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const cells: (number | null)[] = [];
+  for (let i = 0; i < startOffset; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  const deadlinesByDay = (day: number): Deadline[] => {
+    const iso = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    return DEADLINES.filter((d) => d.date === iso);
+  };
+
+  const urgencyColor = (u: Deadline["urgency"]) =>
+    u === "high" ? "var(--vivid-red)" : u === "med" ? "var(--vivid-orange)" : "var(--vivid-green)";
 
   return (
-    <div className="mobile-shell pb-32 bg-black min-h-screen relative">
-      <div className="absolute inset-0 pointer-events-none bg-gradient-jungle-glow opacity-60" />
-
-      <header
-        className="px-5 pt-4 pb-2 relative z-10 flex items-center justify-between"
-        style={{ paddingTop: "max(18px, env(safe-area-inset-top))" }}
-      >
-        <div>
-          <div className="flex items-center gap-2">
-            <Bell size={18} className="text-lemon" />
-            <p className="text-lemon text-[10px] font-bold uppercase tracking-[2px] font-ui">
-              Stay on top
-            </p>
-          </div>
-          <h1 className="text-white text-[24px] font-display font-bold leading-tight mt-1">
-            Upcoming deadlines 🗓
-          </h1>
-        </div>
+    <main className="min-h-screen pb-28 bg-[#0A0A0A]">
+      <header className="px-5 pt-6 pb-4">
+        <p className="text-white/50 italic text-sm">{onboarding.first_name ?? "Toi"}, voilà ce qui arrive</p>
+        <h1 className="font-display font-black text-3xl text-white">Échéances</h1>
       </header>
 
-      <div className="px-5 mt-3 mb-4 relative z-10">
-        <CleoBubble
-          side="left"
-          pose="guiding"
-          tone="dark"
-          size={56}
-          text={
-            <>
-              Don't miss these — I'll remind you. <b>Tax declaration</b> first, it's the closest 🚨
-            </>
-          }
-        />
-      </div>
+      <section className="px-5 space-y-3 mb-6">
+        {[...DEADLINES].sort((a, b) => a.date.localeCompare(b.date)).map((d) => {
+          const t = buildingThemes[d.buildingId];
+          const date = new Date(d.date);
+          const day = date.toLocaleDateString("fr-FR", { day: "2-digit" });
+          const m = date.toLocaleDateString("fr-FR", { month: "short" });
+          const isHL = highlight === d.date;
+          return (
+            <article key={d.date + d.title} className="rounded-2xl p-4 flex items-center gap-4 transition-all"
+              style={{
+                background: isHL ? `${t.color}33` : "var(--bg-surface)",
+                borderLeft: `4px solid ${t.color}`,
+                transform: isHL ? "scale(1.02)" : "scale(1)",
+              }}>
+              <div className="text-center w-14 shrink-0">
+                <p className="font-display font-black text-2xl" style={{ color: t.color }}>{day}</p>
+                <p className="text-white/50 text-xs uppercase font-label">{m}</p>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-display font-bold text-white">{d.title}</p>
+                <p className="text-white/40 italic text-xs">{t.name}</p>
+              </div>
+              <div className="px-2 py-1 rounded-full text-[10px] font-label font-bold uppercase"
+                style={{ background: urgencyColor(d.urgency), color: "#fff" }}>
+                {d.urgency === "high" ? "Urgent" : d.urgency === "med" ? "Bientôt" : "OK"}
+              </div>
+            </article>
+          );
+        })}
+      </section>
 
-      <div className="px-5 mb-4 overflow-x-auto scrollbar-hide relative z-10">
-        <div className="flex gap-2 w-max">
-          {FILTERS.map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-4 py-2 rounded-full text-[12px] font-display font-bold transition border ${
-                filter === f
-                  ? "bg-lemon text-black border-black/20 shadow-lemon"
-                  : "bg-navy text-white-60 border-white/10"
-              }`}
-            >
-              {f}
-            </button>
+      {/* Calendrier mensuel */}
+      <section className="mx-5 rounded-3xl p-4 bg-[#1C1C1E]">
+        <div className="flex items-center justify-between mb-3">
+          <button onClick={() => setCursor(new Date(year, month - 1, 1))}
+            className="w-9 h-9 rounded-full bg-[#2C2C2E] text-white flex items-center justify-center">←</button>
+          <p className="font-display font-bold text-white">{FR_MONTHS[month]} {year}</p>
+          <button onClick={() => setCursor(new Date(year, month + 1, 1))}
+            className="w-9 h-9 rounded-full bg-[#2C2C2E] text-white flex items-center justify-center">→</button>
+        </div>
+
+        <div className="grid grid-cols-7 gap-1 mb-2">
+          {FR_DAYS.map((d, i) => (
+            <div key={i} className="text-center text-[10px] uppercase tracking-wider text-white/40 font-label py-1">{d}</div>
           ))}
         </div>
-      </div>
 
-      <div className="px-5 space-y-3 relative z-10">
-        {filtered.length === 0 && (
-          <CCard>
-            <p className="text-white text-center text-[14px] font-ui">
-              Nothing here. Cleo says: enjoy a coffee ☕
-            </p>
-          </CCard>
-        )}
-        {filtered.map((item, i) => (
-          <motion.div
-            key={item.title}
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, delay: i * 0.06 }}
-          >
-            <CCard className={`border-l-4 ${borderTone[item.urgency]}`}>
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Pill variant={item.urgency === "urgent" ? "danger" : item.urgency === "soon" ? "warn" : "lemon"}>
-                      {item.cat}
-                    </Pill>
-                    {item.done && (
-                      <span className="text-lemon text-[11px] flex items-center gap-1 font-ui font-bold">
-                        <Check size={11} strokeWidth={3} /> Done
-                      </span>
-                    )}
+        <div className="grid grid-cols-7 gap-1">
+          {cells.map((d, i) => {
+            if (d === null) return <div key={i} />;
+            const ds = deadlinesByDay(d);
+            const has = ds.length > 0;
+            const main = ds[0];
+            const t = main ? buildingThemes[main.buildingId] : null;
+            return (
+              <button
+                key={i}
+                disabled={!has}
+                onClick={() => has && main && setHighlight(highlight === main.date ? null : main.date)}
+                className="aspect-square rounded-xl flex flex-col items-center justify-center text-xs font-label relative transition-all"
+                style={{
+                  background: has ? `${t!.color}26` : "transparent",
+                  border: has ? `1.5px solid ${t!.color}` : "1px solid rgba(255,255,255,0.04)",
+                  color: has ? "#fff" : "rgba(255,255,255,0.5)",
+                }}
+              >
+                <span className="font-bold">{d}</span>
+                {has && (
+                  <div className="absolute bottom-1 flex gap-0.5">
+                    {ds.slice(0, 3).map((dl, k) => (
+                      <span key={k} className="w-1 h-1 rounded-full"
+                        style={{ background: urgencyColor(dl.urgency) }} />
+                    ))}
                   </div>
-                  <p className="text-white text-[15px] font-display font-bold">{item.title}</p>
-                  <p className="text-white-60 text-[12px] mt-1 font-ui leading-snug">{item.desc}</p>
-                </div>
-                <div className="text-right shrink-0">
-                  <p className={`text-[22px] font-display font-extrabold ${textTone[item.urgency]}`}>
-                    {item.days}
-                  </p>
-                  <p className="text-white-40 text-[10px] uppercase tracking-wider font-ui font-bold">
-                    days
-                  </p>
-                </div>
-              </div>
-              <div className="mt-3 pt-3 border-t border-white/10">
-                {item.done ? (
-                  <span className="text-white-60 text-[12px] font-ui font-semibold">
-                    ✓ Already handled
-                  </span>
-                ) : (
-                  <Link
-                    to={item.href}
-                    className="text-lemon text-[13px] font-display font-bold flex items-center gap-1"
-                  >
-                    Start quest <ArrowRight size={13} />
-                  </Link>
                 )}
-              </div>
-            </CCard>
-          </motion.div>
-        ))}
-      </div>
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-white/40 italic text-[10px] mt-3 text-center">Tap un jour avec point pour voir l'échéance ↑</p>
+      </section>
 
       <BottomNav />
-    </div>
+    </main>
   );
 }
