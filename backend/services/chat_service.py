@@ -33,20 +33,18 @@ _MAX_HISTORY = 10  # keep last N turns to avoid exceeding context window
 # ---------------------------------------------------------------------------
 
 _PERSONA = """\
-You are Cleo, a banking concierge for expats and international students.
-Your ONE job: help the user find and open the best bank account for their situation,
-wherever they are moving to.
+I'm Cleo. I help people figure out the financial and admin side of moving to a new country — \
+banking, visas, paperwork, taxes, housing, the whole thing.
 
-Style rules — strictly enforced:
-- Be SHORT. 3 to 5 sentences maximum per reply. No walls of text.
-- No bullet-point laundry lists. If you must list, max 3 items.
-- No bold headers, no "Étapes à suivre", no Wikipedia-style guides.
-- Talk like a knowledgeable friend, not a brochure.
-- Reply in the same language the user writes in.
-- Personalise using the user's profile (origin, destination, status).
-- If web results are available, use ONE concrete fact or URL — not a full summary.
-- Never fabricate bank names, fees, or URLs. If unsure, say so briefly.
-- If the question is completely outside banking/finance, answer in one sentence and redirect.\
+I talk like a friend who's actually done this before, not a call-centre agent.
+- Short sentences. I get to the point fast.
+- I'm opinionated: "Go with X" beats "you might consider X or possibly Y or perhaps Z".
+- I never start with "Bonjour !", "Certainly!", "Of course!", "Great question!", or "I hope this helps!".
+- I don't pad answers. Two sentences beats two paragraphs.
+- I reply in whatever language you write to me in — French, English, Arabic, Spanish, anything.
+- I don't make up URLs, bank names, fees, or procedures. If I'm not sure, I say so in one sentence.
+- I cover banking, account opening, wire transfers, visas, residence permits, admin procedures,
+  taxes, insurance, and housing — for any origin/destination pair worldwide.\
 """
 
 
@@ -98,11 +96,23 @@ Tailor every response to this person's specific origin–destination situation (
     if web_context:
         sections.append(
             f"""
-=== LIVE WEB CONTEXT (from Tavily) ===
+=== WEB SEARCH RESULTS — read these BEFORE answering ===
 {web_context}
-======================================
+=========================================================
 
-Use this information to ground your answer in up-to-date facts. Cite URLs where relevant.\
+MANDATORY: Use these results as your primary source.
+Pull out the most useful concrete fact or step and lead with it.
+Cite the URL inline (just the domain is fine). 
+If the results don't answer the question, say "I couldn't find a clear answer online" — \
+don't fill in from memory.\
+"""
+        )
+    else:
+        sections.append(
+            """
+No live web results available for this query.
+Answer from general knowledge but flag anything time-sensitive with \
+"double-check this as rules change".\
 """
         )
 
@@ -116,27 +126,31 @@ Use this information to ground your answer in up-to-date facts. Cite URLs where 
 
 def _build_tavily_query(message: str, profile: dict | None) -> str:
     """
-    Enrich the user message with destination/origin context so that Tavily
-    returns highly relevant, country-specific results.
+    Enrich the user message with destination/origin context so Tavily returns
+    highly specific, actionable results rather than generic country pages.
+
+    Strategy:
+    - Append destination country (most important for admin/banking procedures)
+    - Append origin nationality when relevant
+    - Append employment status for banking eligibility questions
+    - Prefix with "how to" / "démarches" to favour step-by-step results
 
     Example:
-        "comment ouvrir un compte bancaire" + profile(destination=France)
-        → "comment ouvrir un compte bancaire en France pour étudiant marocain"
+        "comment recuperer son visa" + profile(destination=France, origin=Maroc)
+        → "how to retrieve visa France expat from Morocco step by step 2025"
     """
-    if not profile:
-        return message
-
-    destination = profile.get("country_moving_to")
-    origin = profile.get("country_of_residence")
-    status = profile.get("employment_status")
+    destination = (profile or {}).get("country_moving_to", "")
+    origin = (profile or {}).get("country_of_residence", "")
+    status = (profile or {}).get("employment_status", "")
 
     parts: list[str] = [message]
     if destination:
-        parts.append(f"in {destination}")
+        parts.append(destination)
     if origin:
-        parts.append(f"for someone from {origin}")
+        parts.append(f"from {origin}")
     if status:
-        parts.append(f"({status})")
+        parts.append(status)
+    parts.append("2025 practical guide expat")
 
     return " ".join(parts)
 
@@ -250,8 +264,8 @@ class ChatService:
         response = client.chat.completions.create(
             model="llama3.1-8b",
             messages=messages,
-            temperature=0.4,
-            max_tokens=350,  # enforce concise replies
+            temperature=0.35,
+            max_tokens=420,  # enough for a sourced answer without padding
         )
 
         reply: str = response.choices[0].message.content.strip()
