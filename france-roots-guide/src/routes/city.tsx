@@ -1,7 +1,11 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useApp } from "@/lib/store";
-import { buildingThemes, buildingOrder, buildingRequiredDocs, type BuildingId } from "@/lib/theme";
+import { BUILDING_PATH_ORDER } from "@/config/buildingPath";
+import { buildingThemes, buildingRequiredDocs, type BuildingId } from "@/lib/theme";
+
+/** Même ordre que partout ailleurs — import direct du fichier config pour l’écran /city. */
+const buildingOrder: BuildingId[] = [...BUILDING_PATH_ORDER] as BuildingId[];
 import { AmbientGlobe } from "@/components/AmbientGlobe";
 import { CleoCharacter } from "@/components/CleoCharacter";
 import { BuildingSVG } from "@/components/BuildingSVG";

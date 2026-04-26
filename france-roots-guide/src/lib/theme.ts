@@ -1,3 +1,5 @@
+import { BUILDING_PATH_ORDER } from "../config/buildingPath";
+
 export type BuildingId =
   | "airport"
   | "bank"
@@ -29,19 +31,8 @@ export const buildingThemes: Record<BuildingId, BuildingTheme> = {
   aids:       { name: "Aides",       color: "#4ADE80", textColor: "#000" },
 };
 
-/** Ordre d’affichage / progression sur /city (priorité: Banque → Travail → Impôts → Aides). */
-export const buildingOrder: BuildingId[] = [
-  "airport",
-  "bank",
-  "work",
-  "taxes",
-  "aids",
-  "housing",
-  "insurance",
-  "transport",
-  "children",
-  "retirement",
-];
+/** Même ordre que `src/config/buildingPath.ts` (re-export pour dashboard, generating, etc.) */
+export const buildingOrder: BuildingId[] = [...BUILDING_PATH_ORDER] as BuildingId[];
 
 export const buildingRequiredDocs: Record<Exclude<BuildingId, "airport">, string[]> = {
   bank:       ["passeport", "identité", "justificatif"],
