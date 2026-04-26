@@ -149,22 +149,26 @@ function Dashboard() {
   const totalSavings = biberons.reduce((s, b) => s + b.savings, 0);
   const benefitsTotal = userBenefits.reduce((s, b) => s + b.monthly_value, 0);
 
+  // Sort payslips by ISO key (chronological)
+  const sortedPayslips = uploadedPayslips.sort(([a], [b]) => a.localeCompare(b));
+
   // Payslip bar chart data (last 6 months)
-  const payslipBars: PayslipBar[] = uploadedPayslips
+  const payslipBars: PayslipBar[] = sortedPayslips
     .slice(-6)
-    .map(([month, p], i) => ({
+    .map(([month, p], i, arr) => ({
       label: (() => {
         const [y, m] = month.split("-");
+        if (!y || !m) return month;
         return new Date(Number(y), Number(m) - 1, 1).toLocaleDateString(locale, { month: "short" });
       })(),
       net: p.net ?? 0,
-      color: i === uploadedPayslips.length - 1 ? "var(--lemon)" : "var(--vivid-purple)",
+      color: i === arr.length - 1 ? "var(--lemon)" : "var(--vivid-purple)",
     }));
 
   // Sparkline from payslips or flat line
-  const sparklineData = uploadedPayslips.length >= 2
-    ? uploadedPayslips.slice(-12).map(([, p]) => p.net ?? 0)
-    : [avgNet, avgNet, avgNet, avgNet, avgNet, avgNet];
+  const sparklineData = sortedPayslips.length >= 2
+    ? sortedPayslips.slice(-12).map(([, p]) => p.net ?? 0)
+    : [avgNet || 100, avgNet || 100, avgNet || 100, avgNet || 100, avgNet || 100, avgNet || 100];
 
   return (
     <main className="min-h-screen pb-28 bg-[#0A0A0A]">

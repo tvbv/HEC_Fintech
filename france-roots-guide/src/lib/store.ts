@@ -59,7 +59,7 @@ interface AppState {
   streak: number;
   biberons: Biberon[];
   uploadedDocuments: UploadedDoc[];
-  payslips: Record<string, { uploaded: boolean; net?: number }>;
+  payslips: Record<string, { uploaded: boolean; net?: number; filename?: string }>;
   userBenefits: UserBenefit[];
   chatMessages: ChatMessage[];
 
@@ -74,7 +74,7 @@ interface AppState {
   addBiberonSavings: (id: string, amount: number) => void;
   addDocument: (doc: Omit<UploadedDoc, "id" | "uploaded_at">) => void;
   removeDocument: (id: string) => void;
-  uploadPayslip: (month: string) => void;
+  uploadPayslip: (isoMonth: string, filename?: string, net?: number) => void;
   addBenefit: (b: Omit<UserBenefit, "id" | "obtained_at">) => void;
   removeBenefit: (id: string) => void;
   appendChat: (m: ChatMessage) => void;
@@ -147,9 +147,16 @@ export const useApp = create<AppState>()(
         })),
       removeDocument: (id) =>
         set((s) => ({ uploadedDocuments: s.uploadedDocuments.filter((d) => d.id !== id) })),
-      uploadPayslip: (month) =>
+      uploadPayslip: (isoMonth, filename, net) =>
         set((s) => ({
-          payslips: { ...s.payslips, [month]: { uploaded: true, net: 2300 + Math.floor(Math.random() * 400) } },
+          payslips: {
+            ...s.payslips,
+            [isoMonth]: {
+              uploaded: true,
+              net: net ?? (2300 + Math.floor(Math.random() * 400)),
+              filename,
+            },
+          },
         })),
       addBenefit: (b) =>
         set((s) =>
